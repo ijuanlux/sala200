@@ -10,6 +10,16 @@ navigation and a 25-peseta coin for the INSERT COIN.
 
 > No ROMs, no BIOS, no links to them. Bring dumps of the cartridges you own.
 
+![The 3D lobby](docs/img/lobby3d.png)
+*The 3D lobby: each neon door is a system, and other members walk around it in real time.*
+
+| | |
+|---|---|
+| ![Library](docs/img/biblioteca.png) | ![Arcade shelf](docs/img/arcade.png) |
+| The library, with box art | 2270 arcade games, self-healing cores |
+| ![Member card](docs/img/ficha.png) | ![Challenger prompt](docs/img/retador.png) |
+| Member card: levels, medals, war cry | Arcade netplay: the challenger inserts their coin |
+
 ---
 
 Tu salón recreativo clandestino, montado en una Raspberry Pi. Emulación en el
