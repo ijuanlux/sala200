@@ -47,6 +47,25 @@ tu hardware, tus reglas.
 | `catalogo/` | Scripts Python que escanean tus ROMs y generan el catálogo + carátulas |
 | `deploy/` | nginx, unidades systemd, script de alta de usuarios |
 
+## Quick start (Docker)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ijuanlux/sala200/master/instalar.sh | bash
+```
+
+Or by hand:
+
+```bash
+git clone https://github.com/ijuanlux/sala200 && cd sala200
+mkdir -p roms/SNES roms/MegaDrive roms/NeoGeo roms/Arcade   # your own dumps
+SALA_ADMIN=juan SALA_PASS=secret SALA_SALT=$(openssl rand -hex 16) docker compose up -d
+```
+
+Open **http://localhost:8080**, log in with the member you just created, and put
+your games under `roms/<System>/` — the catalogue rescans every 10 minutes.
+Everything (web, profiles API and the netplay relay) runs in that single
+container; your data lives in a Docker volume.
+
 ## Requisitos
 
 - Raspberry Pi 4 (o cualquier Linux pequeño) con Raspberry Pi OS / Debian

@@ -1,0 +1,19 @@
+# SALA 200 — arranca tu salón recreativo en una orden:  docker compose up -d
+services:
+  sala200:
+    build: .
+    # o usa la imagen ya construida:  image: ghcr.io/ijuanlux/sala200:latest
+    container_name: sala200
+    ports:
+      - "8080:8080"
+    environment:
+      SALA_SALT: ${SALA_SALT:-cambia-esto-por-algo-tuyo}   # la sal del login
+      SALA_ADMIN: ${SALA_ADMIN:-admin}                     # tu nombre de socio
+      SALA_PASS: ${SALA_PASS:-admin}                       # tu clave
+    volumes:
+      - ./roms:/roms:ro                      # TUS juegos (el proyecto no trae ninguno)
+      - sala200-datos:/var/lib/sala200       # perfiles, partidas, invitaciones
+    restart: unless-stopped
+
+volumes:
+  sala200-datos:
