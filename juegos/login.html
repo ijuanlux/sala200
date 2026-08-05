@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#030503">
+<meta name="robots" content="noindex, nofollow">
+<title>SALA 200 · ACCESO</title>
+<style>
+  @font-face { font-family: 'PS2P'; src: url('fonts/pressstart2p.ttf') format('truetype'); font-display: swap; }
+  :root { --bg:#030503; --fg:#d8ffe8; --ph:#39ff88; --cy:#35e9ff; --red:#ff2d55; --dim:#1a3324; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:var(--bg); color:var(--fg); overflow:hidden;
+    font-family: ui-monospace,'SF Mono',Menlo,monospace; }
+  canvas#bg { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
+  .grain { position:fixed; inset:0; z-index:5; pointer-events:none; opacity:.07; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .scan { position:fixed; inset:0; z-index:4; pointer-events:none; opacity:.16;
+    background:repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.6) 2px 4px); }
+  .vig { position:fixed; inset:0; z-index:3; pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85) 100%); }
+
+  /* pantalla de arranque tipo BIOS */
+  #boot { position:fixed; inset:0; z-index:40; background:#000; padding:6vh 6vw; overflow:hidden;
+    font-size:clamp(10px,1.5vw,13px); color:#4ade80; line-height:2; }
+  #boot .l { opacity:0; }
+  #boot .ok { color:var(--ph); }
+  #boot .warn { color:#ffd23f; }
+
+  #crt { position:fixed; inset:0; z-index:39; background:#eafff2; transform:scaleY(0); pointer-events:none; }
+
+  main { position:relative; z-index:10; height:100%; display:grid; place-items:center; padding:5vw;
+    overflow-y:auto; }   /* en móvil vertical con teclado abierto, que el panel pueda rodar */
+  .panel { width:min(520px,100%); border:2px solid var(--dim); background:rgba(3,10,6,.82);
+    padding:clamp(22px,4vw,40px); backdrop-filter:blur(3px); position:relative;
+    box-shadow:0 0 60px rgba(57,255,136,.09), inset 0 0 60px rgba(0,0,0,.6); opacity:0; }
+  .panel::before, .panel::after { content:''; position:absolute; width:14px; height:14px; border:2px solid var(--ph); }
+  .panel::before { top:-2px; left:-2px; border-right:0; border-bottom:0; }
+  .panel::after { bottom:-2px; right:-2px; border-left:0; border-top:0; }
+  .tag { font-family:'PS2P'; font-size:9px; letter-spacing:.4em; color:var(--cy); margin-bottom:14px; }
+  h1 { font-family:'PS2P'; font-size:clamp(22px,5vw,40px); line-height:1.25; margin-bottom:6px;
+    text-shadow:0 0 26px rgba(57,255,136,.5); }
+  h1 span { color:var(--ph); }
+  .sub { font-size:11px; color:#6fa585; letter-spacing:.18em; margin-bottom:26px; }
+  label { display:block; font-family:'PS2P'; font-size:9px; color:#6fa585; margin:16px 0 7px; letter-spacing:.15em; }
+  input { width:100%; background:#050f09; border:2px solid var(--dim); color:var(--ph);
+    padding:15px 14px; font-family:'PS2P'; font-size:12px; outline:none; letter-spacing:.05em;
+    -webkit-appearance:none; border-radius:0; }
+  input:focus { border-color:var(--ph); box-shadow:0 0 22px rgba(57,255,136,.22); }
+  button.go { width:100%; margin-top:26px; background:transparent; border:2px solid var(--ph); color:var(--ph);
+    font-family:'PS2P'; font-size:12px; padding:17px; cursor:pointer; letter-spacing:.14em;
+    transition:background .18s, color .18s, box-shadow .18s; }
+  button.go:hover { background:var(--ph); color:#001a0c; box-shadow:0 0 34px rgba(57,255,136,.45); }
+  .msg { min-height:20px; margin-top:16px; font-family:'PS2P'; font-size:9.5px; letter-spacing:.1em; color:var(--red); }
+  .foot { margin-top:22px; font-size:10px; color:#2c5540; letter-spacing:.2em; display:flex;
+    justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
+  /* selector de idioma: fijo arriba a la derecha, visible en cualquier pantalla */
+  #langSel { position:fixed; z-index:20; top:max(12px, env(safe-area-inset-top));
+    right:max(14px, env(safe-area-inset-right)); font-family:'PS2P'; font-size:10px;
+    letter-spacing:.1em; user-select:none; background:rgba(3,10,6,.8);
+    border:2px solid var(--dim); padding:8px 10px; }
+  #langSel b { cursor:pointer; color:#2c5540; font-weight:normal; padding:6px 5px; }
+  #langSel b:hover { color:var(--fg); }
+  #langSel b.on { color:var(--cy); text-shadow:0 0 12px rgba(53,233,255,.5); }
+  .blink { animation:bl 1.1s steps(2) infinite; }
+  @keyframes bl { 50% { opacity:0; } }
+  .shake { animation:sh .42s; }
+  @keyframes sh { 10%,90%{transform:translateX(-3px)} 20%,80%{transform:translateX(6px)}
+    30%,50%,70%{transform:translateX(-10px)} 40%,60%{transform:translateX(10px)} }
+  body.err { --ph:var(--red); }
+  body.err .panel { border-color:var(--red); box-shadow:0 0 60px rgba(255,45,85,.2); }
+  /* transición de entrada: la sala se traga la pantalla */
+  #warp { position:fixed; inset:0; z-index:45; pointer-events:none; opacity:0; background:var(--ph); }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="vig"></div><div class="scan"></div><div class="grain"></div>
+
+<div id="boot"></div>
+<div id="crt"></div>
+<div id="warp"></div>
+
+<main>
+  <form class="panel" id="panel" autocomplete="off">
+    <div class="tag">— ACCESO RESTRINGIDO —</div>
+    <h1>SALA <span>200</span></h1>
+    <p class="sub">salón recreativo clandestino · solo socios</p>
+
+    <label for="u">IDENTIFICACIÓN</label>
+    <input id="u" name="u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="usuario">
+
+    <label for="p">CLAVE DE ACCESO</label>
+    <input id="p" name="p" type="password" autocomplete="current-password" placeholder="••••••••">
+
+    <button class="go" type="submit">▶ INSERTAR MONEDA</button>
+    <div class="msg" id="msg"></div>
+    <div class="foot"><span>SALA200 BIOS v8</span><span class="blink">█</span></div>
+  </form>
+</main>
+<span id="langSel"><b data-l="es">ES</b>·<b data-l="en">EN</b></span>
+
+<script src="login.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# nada de ROMs, BIOS, partidas ni datos de usuarios
+roms/
+juegos/ejs/
+juegos/lib/
+juegos/thumbs/
+juegos/covers/
+juegos/mini/
+juegos/games.json
+api/users.json
+*.state
+node_modules/

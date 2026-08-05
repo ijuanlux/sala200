@@ -1,0 +1,11 @@
+#!/bin/bash
+# SALA 200: alta de un usuario en el portero de nginx. Lo llama la API (via
+# sudoers NOPASSWD). Valida estricto: solo un hash sha256 y un nombre sano.
+set -e
+H="$1"; N="$2"
+[[ "$H" =~ ^[a-f0-9]{64}$ ]] || exit 2
+[[ "$N" =~ ^[a-z0-9_-]{3,16}$ ]] || exit 3
+M=/etc/nginx/conf.d/sala200_map.conf
+grep -q "$H" "$M" && exit 0
+sed -i "0,/^}/s//    \"$H\" 1;   # $N (invitado)\n}/" "$M"
+nginx -t >/dev/null 2>&1 && systemctl reload nginx

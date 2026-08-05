@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#030503">
+<link rel="manifest" href="manifest.json">
+<title>SALA 200</title>
+<link rel="stylesheet" href="style.css?v=33" />
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="scanlines"></div>
+  <div class="cursor"></div>
+  <div class="cursor-dot"></div>
+
+  <div id="preloader">
+    <div class="pre-inner">
+      <div class="pre-coin" data-i18n="coin">INSERT COIN</div>
+      <div class="pre-count"><span class="count">0</span>%</div>
+      <div class="pre-click blink" id="preClick" data-i18n="click" style="visibility:hidden">▶ CLIC PARA METER LA MONEDA ◀</div>
+      <div class="pre-boot" data-i18n="boot">SALA 200 BIOS v8 · 192.168.1.200</div>
+    </div>
+  </div>
+  <div id="crt-flash"></div>
+
+  <canvas id="bg"></canvas>
+
+  <main>
+    <section class="hero" id="hero">
+      <canvas id="scene"></canvas>
+      <div class="hud">
+        <div class="hud-title">SALA 200</div>
+        <div class="hud-btns">
+          <button id="pfBtn" class="hud-mute magnetic" style="display:none">PERFIL</button>
+          <span id="padInd" class="hud-mute pad-off">🎮 —</span>
+          <button id="langBtn" class="hud-mute magnetic">🌐 ES</button>
+          <button id="mute" class="hud-mute magnetic">♪ ON</button>
+        </div>
+      </div>
+      <div class="hud-hint" id="hudHint">WASD / FLECHAS PARA MOVERTE</div>
+      <div class="enter-prompt blink" id="enterPrompt">PULSA ENTER PARA ENTRAR</div>
+      <div class="scroll-hint" id="scrollHint" data-i18n="scroll">▼ O BAJA A LA SALA ▼</div>
+    </section>
+
+    <section class="library" id="library">
+      <div class="lib-bar">
+        <input type="text" id="q" placeholder="BUSCAR JUEGO_" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" inputmode="search">
+        <button id="clearQ" class="tab magnetic" style="display:none">✕</button>
+        <button id="randomBtn" class="tab rnd magnetic" data-i18n="random">🎲 AL AZAR</button>
+        <button id="pfBtn2" class="pf-btn magnetic">PERFIL</button>
+        <button id="langBtn2" class="pf-btn magnetic">🌐 ES</button>
+        <button id="chatBtn" class="pf-btn magnetic" style="display:none">💬 CHAT</button>
+      </div>
+      <div id="onlineBar"></div>
+      <div class="count-line"><span id="count"></span></div>
+      <div class="grid" id="grid"></div>
+    </section>
+  </main>
+
+  <footer class="marquee"><span id="mq"></span></footer>
+
+  <script src="lib/gsap.min.js"></script>
+  <script src="lib/ScrollTrigger.min.js"></script>
+  <script src="lib/lenis.min.js"></script>
+  <script src="main.js?v=27"></script>
+  <script src="perfil.js?v=12"></script>
+  <script type="module" src="scene.js?v=23"></script>
+</body>
+</html>

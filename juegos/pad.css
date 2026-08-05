@@ -1,0 +1,319 @@
+/* SALA 200 — mandos virtuales con la pinta de cada consola.
+   Los tamaños (--btn, --dpad) los calcula player.html según la pantalla. */
+
+body, .ejs_virtualGamepad_parent {
+  --pad-op: .45;
+  --pad-a: #b898ff; --pad-b: #8f7bd8; --pad-c: #d94f9a; --pad-d: #3fb6d9;
+  --pad-face: rgba(12, 16, 22, .55);
+  --pad-edge: rgba(255, 255, 255, .26);
+  --btn: var(--sala-btn, 68px);
+  --pill-h: calc(var(--btn) * .72);   /* franja inferior para START/SELECT */
+  --dpad: var(--sala-dpad, 170px);
+  transition: opacity .5s ease;
+}
+.ejs_virtualGamepad_parent.sala-idle { opacity: .45; }
+
+/* ---------- zonas ---------- */
+.ejs_virtualGamepad_left {
+  width: var(--dpad) !important; height: var(--dpad) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  bottom: calc(var(--pill-h) + max(10px, env(safe-area-inset-bottom))) !important;
+}
+.ejs_virtualGamepad_right {
+  width: calc(var(--btn) * 3.15) !important; height: calc(var(--btn) * 3.15) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  bottom: calc(var(--pill-h) + max(10px, env(safe-area-inset-bottom))) !important;
+}
+.ejs_virtualGamepad_bottom { bottom: max(4px, env(safe-area-inset-bottom)) !important;
+  height: var(--pill-h) !important; align-items: center; }
+
+/* ---------- cruceta ---------- */
+.ejs_dpad_main {
+  opacity: var(--pad-op) !important;
+  background: none !important;            /* nunca pintar el cuadrado entero */
+  filter: drop-shadow(0 5px 14px rgba(0,0,0,.55));
+  transition: opacity .18s;
+}
+.ejs_dpad_vertical { width: 36% !important; border-radius: 14px !important; }
+.ejs_dpad_horizontal { height: 36% !important; border-radius: 14px !important; }
+/* barras opacas: si fueran translúcidas, el cruce se ve doble oscuro */
+.ejs_dpad_bar {
+  background: linear-gradient(180deg, #414958, #191d25) !important;
+  border: 2px solid rgba(255,255,255,.16) !important;
+  box-shadow: inset 0 -3px 8px rgba(0,0,0,.45);
+}
+/* al pulsar: se ilumina SOLO la dirección, con la punta de color */
+.ejs_dpad_up_pressed, .ejs_dpad_down_pressed,
+.ejs_dpad_left_pressed, .ejs_dpad_right_pressed { opacity: .95 !important; }
+.ejs_dpad_up_pressed .ejs_dpad_vertical .ejs_dpad_bar {
+  background: linear-gradient(180deg, var(--pad-a), #191d25 62%) !important;
+}
+.ejs_dpad_down_pressed .ejs_dpad_vertical .ejs_dpad_bar {
+  background: linear-gradient(0deg, var(--pad-a), #191d25 62%) !important;
+}
+.ejs_dpad_left_pressed .ejs_dpad_horizontal .ejs_dpad_bar {
+  background: linear-gradient(90deg, var(--pad-a), #191d25 62%) !important;
+}
+.ejs_dpad_right_pressed .ejs_dpad_horizontal .ejs_dpad_bar {
+  background: linear-gradient(270deg, var(--pad-a), #191d25 62%) !important;
+}
+/* las puntas blancas del original, en color */
+.ejs_dpad_left_pressed .ejs_dpad_horizontal:before { border-right-color: var(--pad-a) !important; }
+.ejs_dpad_right_pressed .ejs_dpad_horizontal:after { border-left-color: var(--pad-a) !important; }
+.ejs_dpad_up_pressed .ejs_dpad_vertical:before { border-bottom-color: var(--pad-a) !important; }
+.ejs_dpad_down_pressed .ejs_dpad_vertical:after { border-top-color: var(--pad-a) !important; }
+
+/* ---------- botones ---------- */
+.ejs_virtualGamepad_button {
+  width: var(--btn) !important; height: var(--btn) !important;
+  line-height: calc(var(--btn) - 6px) !important;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.22), transparent 62%), var(--pad-face) !important;
+  border: 2px solid var(--pad-edge) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 0 rgba(0,0,0,.4), inset 0 -3px 7px rgba(0,0,0,.32) !important;
+  opacity: var(--pad-op) !important;
+  font-family: 'PS2P', ui-monospace, monospace !important;
+  font-weight: 400 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.85);
+  transition: opacity .16s, transform .08s, box-shadow .12s;
+}
+.ejs_virtualGamepad_button.ejs_virtualGamepad_button_down {
+  opacity: .96 !important;
+  transform: translateY(3px) scale(.95);
+  box-shadow: 0 1px 0 rgba(0,0,0,.5), inset 0 4px 10px rgba(0,0,0,.5) !important;
+}
+.b_a { border-color: var(--pad-a) !important; color: var(--pad-a) !important; }
+.b_b { border-color: var(--pad-b) !important; color: var(--pad-b) !important; }
+.b_c { border-color: var(--pad-c) !important; color: var(--pad-c) !important; }
+.b_d { border-color: var(--pad-d) !important; color: var(--pad-d) !important; }
+.b_x, .b_y, .b_z { border-color: rgba(255,255,255,.32) !important; color: rgba(255,255,255,.92) !important; }
+
+.b_l, .b_r {
+  width: calc(var(--btn) * 2.1) !important; height: calc(var(--btn) * .82) !important;
+  line-height: calc(var(--btn) * .76) !important; border-radius: 14px !important;
+  font-size: calc(var(--btn) * .3) !important; opacity: .4 !important;
+  border-color: rgba(255,255,255,.34) !important; color: rgba(255,255,255,.95) !important;
+}
+.ejs_virtualGamepad_top { width: 100% !important; left: 0 !important; top: auto !important; height: 0 !important;
+  /* justo por encima de lo más alto (cruceta o botones) más un respiro */
+  bottom: min(calc(max(var(--dpad), var(--btn) * 3.15) + var(--pill-h) + var(--btn) * .95
+               + max(10px, env(safe-area-inset-bottom))), 56dvh) !important; }
+.b_start, .b_select {
+  width: auto !important; height: auto !important; line-height: 1 !important;
+  padding: 12px 20px !important; border-radius: 40px !important;
+  border-color: rgba(255,255,255,.3) !important; color: rgba(255,255,255,.9) !important;
+  opacity: .3 !important;
+}
+.b_start.ejs_virtualGamepad_button_down, .b_select.ejs_virtualGamepad_button_down { opacity: .95 !important; }
+
+/* ================= identidad por consola ================= */
+body.sys-snes, body.sys-snes .ejs_virtualGamepad_parent {
+  --pad-a: #d94f9a; --pad-b: #ffd23f; --pad-c: #3fb6d9; --pad-d: #5a4fcf;
+  --pad-face: rgba(226, 222, 240, .18); --pad-edge: rgba(184, 152, 255, .5);
+}
+body.sys-snes .b_x { border-color: #3fb6d9 !important; color: #3fb6d9 !important; }
+body.sys-snes .b_y { border-color: #7d6fe0 !important; color: #9d92ff !important; }
+
+body.sys-megadrive, body.sys-megadrive .ejs_virtualGamepad_parent {
+  --pad-a: #ff4b4b; --pad-b: #ff8c3a; --pad-c: #ffd23f; --pad-d: #35e9ff;
+  --pad-face: rgba(10, 10, 12, .58); --pad-edge: rgba(130, 138, 150, .5);
+}
+body.sys-megadrive .b_a, body.sys-megadrive .b_b, body.sys-megadrive .b_c {
+  width: calc(var(--btn) * 1.12) !important; height: calc(var(--btn) * 1.12) !important;
+  line-height: calc(var(--btn) * 1.06) !important;
+}
+body.sys-megadrive .b_x, body.sys-megadrive .b_y, body.sys-megadrive .b_z {
+  width: calc(var(--btn) * .8) !important; height: calc(var(--btn) * .8) !important;
+  line-height: calc(var(--btn) * .74) !important;
+}
+
+body.sys-neogeo .ejs_virtualGamepad_parent, body.sys-arcade, body.sys-arcade .ejs_virtualGamepad_parent {
+  --pad-a: #ff2d2d; --pad-b: #ffd23f; --pad-c: #39ff88; --pad-d: #35a2ff;
+  --pad-face: rgba(8, 12, 18, .52); --pad-edge: rgba(255, 210, 63, .42);
+}
+body.sys-neogeo .ejs_virtualGamepad_button, body.sys-arcade .ejs_virtualGamepad_button {
+  border-width: 3px !important;
+}
+
+body.sys-n64, body.sys-n64 .ejs_virtualGamepad_parent {
+  --pad-a: #39ff88; --pad-b: #35e9ff; --pad-c: #ffd23f; --pad-d: #ff2d78;
+  --pad-face: rgba(14, 20, 18, .52); --pad-edge: rgba(57, 255, 136, .42);
+}
+
+/* ================= COLOCACIÓN RESPONSIVE =================
+   Las posiciones se expresan en múltiplos del tamaño de botón (u = --btn),
+   así el mando se recoloca solo en cualquier pantalla sin recargar.
+   Contenedor derecho = 3.15u de lado. */
+.ejs_virtualGamepad_right .ejs_virtualGamepad_button { margin: 0 !important; }
+
+/* --- diamante (SNES, N64, NES, GB…) --- */
+.b_a { left: calc(var(--btn) * 2.15) !important; top: calc(var(--btn) * 1.07) !important; }
+.b_y { left: 0 !important;                       top: calc(var(--btn) * 1.07) !important; }
+.b_x { left: calc(var(--btn) * 1.07) !important; top: 0 !important; }
+.b_b { left: calc(var(--btn) * 1.07) !important; top: calc(var(--btn) * 2.15) !important; }
+
+/* --- MEGA DRIVE: solo el arco A B C, como el mando de tres botones ---
+   Al quitar la fila de arriba subimos el arco para que quede centrado. */
+body.sys-megadrive .b_a { left: 0 !important;                       top: calc(var(--btn) * 1.42) !important; }
+body.sys-megadrive .b_b { left: calc(var(--btn) * 1.10) !important; top: calc(var(--btn) * 1.06) !important; }
+body.sys-megadrive .b_c { left: calc(var(--btn) * 2.20) !important; top: calc(var(--btn) * 0.70) !important; }
+
+/* el stick analógico del emulador (nipplejs) en N64: que se vea y ocupe su sitio */
+body.sys-n64 .nipple .back { background: rgba(10,16,26,.5) !important; border: 1px solid rgba(255,255,255,.16); }
+body.sys-n64 .nipple .front { background: radial-gradient(circle at 36% 30%, #cfe0ff, #6f7fb0 62%, #38406a) !important;
+  border: 2px solid rgba(255,255,255,.4); }
+html.stick-on .nipple { display: none !important; }
+
+/* ---------- NINTENDO 64: colores y formas del mando original ----------
+   A azul grande, B verde, los cuatro C amarillos en rombo, Z oscura, START roja. */
+body.sys-n64 .b_a {
+  width: calc(var(--btn) * 1.22) !important; height: calc(var(--btn) * 1.22) !important;
+  line-height: calc(var(--btn) * 1.16) !important; font-size: calc(var(--btn) * .4) !important;
+  border-color: #4a72ff !important; color: #b9caff !important;
+  background: radial-gradient(circle at 36% 30%, rgba(120,155,255,.34), rgba(20,34,90,.5)) !important;
+  box-shadow: 0 0 18px rgba(74,114,255,.3) !important;
+  left: calc(var(--btn) * 0.58) !important; top: calc(var(--btn) * 1.72) !important;
+}
+body.sys-n64 .b_b {
+  width: calc(var(--btn) * 1.05) !important; height: calc(var(--btn) * 1.05) !important;
+  line-height: calc(var(--btn) * 1) !important;
+  border-color: #46c463 !important; color: #b6f5c4 !important;
+  background: radial-gradient(circle at 36% 30%, rgba(90,220,130,.28), rgba(12,60,28,.5)) !important;
+  left: 0 !important; top: calc(var(--btn) * 0.95) !important;
+}
+body.sys-n64 .b_cu, body.sys-n64 .b_cd, body.sys-n64 .b_cl, body.sys-n64 .b_cr {
+  width: calc(var(--btn) * .7) !important; height: calc(var(--btn) * .7) !important;
+  line-height: calc(var(--btn) * .64) !important; font-size: calc(var(--btn) * .27) !important;
+  border-color: #ffd23f !important; color: #ffe98a !important;
+  background: radial-gradient(circle at 36% 30%, rgba(255,215,80,.26), rgba(70,52,0,.45)) !important;
+}
+/* el rombo de las C, encajado dentro de su zona para que no pise la R ni los iconos */
+body.sys-n64 .b_cu { left: calc(var(--btn) * 1.90) !important; top: calc(var(--btn) * 0.05) !important; }
+body.sys-n64 .b_cl { left: calc(var(--btn) * 1.36) !important; top: calc(var(--btn) * 0.68) !important; }
+body.sys-n64 .b_cr { left: calc(var(--btn) * 2.44) !important; top: calc(var(--btn) * 0.68) !important; }
+body.sys-n64 .b_cd { left: calc(var(--btn) * 1.90) !important; top: calc(var(--btn) * 1.31) !important; }
+/* la Z va en el centro de la franja de gatillos, como debajo del mando real */
+body.sys-n64 .b_z {
+  border-color: rgba(190,200,220,.5) !important; color: #dfe6f5 !important;
+  background: rgba(20,24,34,.5) !important;
+  left: 50% !important; margin-left: calc(var(--btn) * -1.05) !important; top: 0 !important;
+  width: calc(var(--btn) * 2.1) !important;
+}
+body.sys-n64 .b_start {
+  border-color: #ff4d4d !important; color: #ffc9c9 !important;
+  background: rgba(60,10,10,.42) !important;
+}
+
+/* --- NEO GEO / arcade: los cuatro en fila curvada, como el mueble ---
+   Colores del mando real: A rojo, B amarillo, C verde y D azul. */
+body.sys-neogeo .b_a, body.sys-arcade .b_a { left: 0 !important;                       top: calc(var(--btn) * 1.30) !important;
+  border-color: #e8443a !important; color: #ffb9b3 !important;
+  background: radial-gradient(circle at 36% 30%, rgba(255,90,80,.3), rgba(70,10,8,.5)) !important; }
+body.sys-neogeo .b_b, body.sys-arcade .b_b { left: calc(var(--btn) * 1.02) !important; top: calc(var(--btn) * 0.95) !important;
+  border-color: #f2c531 !important; color: #ffe9a4 !important;
+  background: radial-gradient(circle at 36% 30%, rgba(255,215,80,.28), rgba(70,55,0,.5)) !important; }
+body.sys-neogeo .b_c, body.sys-arcade .b_c { left: calc(var(--btn) * 2.04) !important; top: calc(var(--btn) * 0.74) !important;
+  border-color: #46c463 !important; color: #b6f5c4 !important;
+  background: radial-gradient(circle at 36% 30%, rgba(90,220,130,.28), rgba(10,60,26,.5)) !important; }
+body.sys-neogeo .b_d, body.sys-arcade .b_d { left: calc(var(--btn) * 3.06) !important; top: calc(var(--btn) * 0.70) !important;
+  border-color: #4a86ff !important; color: #bdd6ff !important;
+  background: radial-gradient(circle at 36% 30%, rgba(90,150,255,.28), rgba(8,26,70,.5)) !important; }
+/* la fila de cuatro necesita algo más de ancho que el resto de sistemas */
+body.sys-neogeo .ejs_virtualGamepad_right, body.sys-arcade .ejs_virtualGamepad_right {
+  width: calc(var(--btn) * 4.1) !important; }
+body.sys-neogeo .b_d, body.sys-arcade .b_d { left: calc(var(--btn) * 1.58) !important; top: calc(var(--btn) * 0.30) !important; }
+
+/* --- gatillos arriba --- */
+.b_l { left: max(16px, env(safe-area-inset-left)) !important; top: 0 !important; }
+.b_r { right: max(16px, env(safe-area-inset-right)) !important; left: auto !important; top: 0 !important; }
+
+/* --- pastillas centrales --- */
+.ejs_virtualGamepad_bottom { left: 0 !important; right: 0 !important; width: auto !important;
+  transform: none !important; margin: 0 !important; display: flex; gap: 10px; justify-content: center; }
+.b_select, .b_start { position: relative !important; left: auto !important; top: auto !important; }
+
+/* ---------- ajuste fino en pantalla completa ---------- */
+body.fs .ejs_virtualGamepad_left,
+body.fs .ejs_virtualGamepad_right {
+  bottom: calc(var(--pill-h) + max(4px, env(safe-area-inset-bottom))) !important;
+}
+body.fs .ejs_virtualGamepad_bottom { bottom: max(2px, env(safe-area-inset-bottom)) !important; }
+body.fs .ejs_virtualGamepad_top {
+  bottom: min(calc(max(var(--dpad), var(--btn) * 3.15) + var(--pill-h) + var(--btn) * .85
+               + max(4px, env(safe-area-inset-bottom))), 56dvh) !important;
+}
+
+/* ---------- vertical: cada bloque a su esquina, con aire en medio ---------- */
+@media (orientation: portrait) {
+  .ejs_virtualGamepad_left  { left: max(6px, env(safe-area-inset-left)) !important; }
+  .ejs_virtualGamepad_right { right: max(6px, env(safe-area-inset-right)) !important; }
+  /* la cruceta un poco más abajo que los botones: así los pulgares no se cruzan */
+  .ejs_virtualGamepad_left  { bottom: calc(var(--pill-h) + max(6px, env(safe-area-inset-bottom))) !important; }
+  .ejs_virtualGamepad_right { bottom: calc(var(--pill-h) + var(--btn) * .28 + max(6px, env(safe-area-inset-bottom))) !important; }
+}
+
+/* ---------- horizontal: todo lo más abajo posible, casi fuera de pantalla ---------- */
+@media (orientation: landscape) {
+  .ejs_virtualGamepad_left,
+  .ejs_virtualGamepad_right {
+    bottom: calc(env(safe-area-inset-bottom) - var(--btn) * .34) !important;
+  }
+  .ejs_virtualGamepad_left  { left: max(2px, env(safe-area-inset-left)) !important; }
+  .ejs_virtualGamepad_right { right: max(2px, env(safe-area-inset-right)) !important; }
+  /* start/select suben a la esquina superior central: abajo ya no hay sitio */
+  .ejs_virtualGamepad_bottom {
+    bottom: auto !important; top: max(6px, env(safe-area-inset-top)) !important;
+  }
+  /* gatillos justo encima de sus bloques */
+  .ejs_virtualGamepad_top {
+    bottom: calc(max(var(--dpad), var(--btn) * 3.15) + var(--btn) * .55
+                 + env(safe-area-inset-bottom) - var(--btn) * .34) !important;
+  }
+}
+body.fs .ejs_virtualGamepad_bottom { bottom: max(2px, env(safe-area-inset-bottom)) !important; }
+@media (orientation: landscape) {
+  body.fs .ejs_virtualGamepad_bottom { bottom: auto !important; top: max(4px, env(safe-area-inset-top)) !important; }
+}
+
+/* ---------- libertad total al colocar ----------
+   Un ancestro con transform convierte "position:fixed" en relativo a él: los botones
+   se iban de la pantalla. Aquí nos aseguramos de que ninguno lo lleve. */
+.ejs_virtualGamepad_parent,
+.ejs_virtualGamepad_left, .ejs_virtualGamepad_right,
+.ejs_virtualGamepad_top, .ejs_virtualGamepad_bottom { transform: none !important; }
+
+/* El marco de pantalla coloca el lienzo con capa propia: el mando tiene que ir por encima
+   o los gatillos L/R (que quedan altos, sobre el juego) no se pueden ni tocar ni arrastrar. */
+.ejs_virtualGamepad_parent { z-index: 9990 !important; }
+.ejs_virtualGamepad_top, .ejs_virtualGamepad_left,
+.ejs_virtualGamepad_right, .ejs_virtualGamepad_bottom { z-index: 9991 !important; }
+
+/* botón sacado de su contenedor y colocado por el usuario.
+   OJO con la capa: en pantalla completa el juego va a 9999, así que estos deben ir por encima
+   o se quedan escondidos detrás (y parece que han desaparecido). */
+.sala-libre { z-index: 10000 !important; pointer-events: auto !important; visibility: visible !important; }
+.b_start.sala-libre, .b_select.sala-libre { position: fixed !important; }
+
+
+/* ---------- PLAYSTATION · DUALSHOCK ----------
+   Colores de Sony: ✕ azul, ○ rojo, ▢ rosa y △ verde. Los cuatro gatillos van en dos
+   alturas (L1/R1 abajo, L2/R2 encima) como en el mando de verdad. */
+body.sys-psx .b_a { border-color: #5b8dff !important; color: #cfe0ff !important;
+  background: radial-gradient(circle at 36% 30%, rgba(110,150,255,.3), rgba(10,24,70,.5)) !important; }
+body.sys-psx .b_b { border-color: #ff5f6d !important; color: #ffc9ce !important;
+  background: radial-gradient(circle at 36% 30%, rgba(255,110,120,.3), rgba(70,8,14,.5)) !important; }
+body.sys-psx .b_y { border-color: #ff7bd5 !important; color: #ffd2f0 !important;
+  background: radial-gradient(circle at 36% 30%, rgba(255,140,215,.3), rgba(70,10,55,.5)) !important; }
+body.sys-psx .b_x { border-color: #4ad991 !important; color: #c2f7dc !important;
+  background: radial-gradient(circle at 36% 30%, rgba(90,225,160,.3), rgba(8,60,36,.5)) !important; }
+/* dos filas de gatillos: L1/R1 pegados al borde y L2/R2 justo encima */
+body.sys-psx .b_l  { left: max(16px, env(safe-area-inset-left)) !important;  top: calc(var(--btn) * .95) !important; }
+body.sys-psx .b_r  { right: max(16px, env(safe-area-inset-right)) !important; left: auto !important; top: calc(var(--btn) * .95) !important; }
+body.sys-psx .b_l2 { left: max(16px, env(safe-area-inset-left)) !important;  top: 0 !important; }
+body.sys-psx .b_r2 { right: max(16px, env(safe-area-inset-right)) !important; left: auto !important; top: 0 !important; }
+body.sys-psx .b_l, body.sys-psx .b_r, body.sys-psx .b_l2, body.sys-psx .b_r2 {
+  width: calc(var(--btn) * 1.75) !important; height: calc(var(--btn) * .74) !important;
+  line-height: calc(var(--btn) * .68) !important; border-radius: 12px !important;
+  font-size: calc(var(--btn) * .26) !important; opacity: .45 !important; }
+/* la franja de gatillos necesita el doble de alto al ir en dos filas */
+body.sys-psx .ejs_virtualGamepad_top { height: calc(var(--btn) * 1.8) !important; }

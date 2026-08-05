@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#030503">
+<meta name="robots" content="noindex, nofollow">
+<title>SALA 200 · ALTA DE SOCIO</title>
+<style>
+  @font-face { font-family: 'PS2P'; src: url('fonts/pressstart2p.ttf') format('truetype'); font-display: swap; }
+  :root { --bg:#030503; --fg:#d8ffe8; --ph:#39ff88; --cy:#35e9ff; --red:#ff2d55; --dim:#1a3324; --oro:#ffd23f; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { min-height:100%; background:var(--bg); color:var(--fg);
+    font-family: ui-monospace,'SF Mono',Menlo,monospace; }
+  body { background-image: radial-gradient(ellipse at 50% 0%, rgba(57,255,136,.07), transparent 60%); }
+  .scan { position:fixed; inset:0; z-index:4; pointer-events:none; opacity:.14;
+    background:repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.6) 2px 4px); }
+  main { position:relative; z-index:10; min-height:100vh; display:grid; place-items:center; padding:6vw; }
+  .panel { width:min(520px,100%); border:2px solid var(--dim); background:rgba(3,10,6,.86);
+    padding:clamp(22px,4vw,40px); position:relative;
+    box-shadow:0 0 60px rgba(57,255,136,.09), inset 0 0 60px rgba(0,0,0,.6); }
+  .panel::before, .panel::after { content:''; position:absolute; width:14px; height:14px; border:2px solid var(--oro); }
+  .panel::before { top:-2px; left:-2px; border-right:0; border-bottom:0; }
+  .panel::after { bottom:-2px; right:-2px; border-left:0; border-top:0; }
+  .tag { font-family:'PS2P'; font-size:9px; letter-spacing:.4em; color:var(--oro); margin-bottom:14px; }
+  h1 { font-family:'PS2P'; font-size:clamp(20px,5vw,34px); line-height:1.25; margin-bottom:6px;
+    text-shadow:0 0 26px rgba(57,255,136,.5); }
+  h1 span { color:var(--ph); }
+  .sub { font-size:11px; color:#6fa585; letter-spacing:.14em; margin-bottom:22px; line-height:1.8; }
+  .sub b { color:var(--cy); }
+  label { display:block; font-family:'PS2P'; font-size:9px; color:#6fa585; margin:15px 0 7px; letter-spacing:.15em; }
+  input { width:100%; background:#050f09; border:2px solid var(--dim); color:var(--ph);
+    padding:14px; font-family:'PS2P'; font-size:12px; outline:none; -webkit-appearance:none; border-radius:0; }
+  input:focus { border-color:var(--ph); box-shadow:0 0 22px rgba(57,255,136,.22); }
+  small { display:block; margin-top:5px; font-size:10px; color:#2c5540; }
+  button.go { width:100%; margin-top:24px; background:transparent; border:2px solid var(--oro); color:var(--oro);
+    font-family:'PS2P'; font-size:12px; padding:16px; cursor:pointer; letter-spacing:.12em;
+    transition:background .18s, color .18s; }
+  button.go:hover { background:var(--oro); color:#201800; }
+  button.go:disabled { opacity:.4; cursor:default; }
+  .msg { min-height:20px; margin-top:15px; font-family:'PS2P'; font-size:9.5px; letter-spacing:.08em; color:var(--red); }
+  .msg.ok { color:var(--ph); }
+  .muerta { text-align:center; padding:20px 0; }
+  .muerta b { font-family:'PS2P'; font-size:12px; color:var(--red); display:block; margin-bottom:14px; line-height:1.8; }
+  .muerta span { font-size:11px; color:#6fa585; }
+  #langSel { position:fixed; z-index:20; top:max(12px, env(safe-area-inset-top));
+    right:max(14px, env(safe-area-inset-right)); font-family:'PS2P'; font-size:10px;
+    user-select:none; background:rgba(3,10,6,.8); border:2px solid var(--dim); padding:8px 10px; }
+  #langSel b { cursor:pointer; color:#2c5540; font-weight:normal; padding:6px 5px; }
+  #langSel b.on { color:var(--cy); }
+</style>
+</head>
+<body>
+<div class="scan"></div>
+<main>
+  <form class="panel" id="panel" autocomplete="off">
+    <div class="tag" data-t="tag">— INVITACIÓN DE SOCIO —</div>
+    <h1>SALA <span>200</span></h1>
+    <p class="sub" id="sub">comprobando tu invitación…</p>
+    <div id="campos" style="display:none">
+      <label for="u" data-t="lu">ELIGE TU NOMBRE</label>
+      <input id="u" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="3-16 letras o números">
+      <small data-t="su">minúsculas, números, guiones · será tu nombre en la sala</small>
+      <label for="p" data-t="lp">ELIGE TU CLAVE</label>
+      <input id="p" type="password" autocomplete="new-password" placeholder="••••••••">
+      <label for="p2" data-t="lp2">REPITE LA CLAVE</label>
+      <input id="p2" type="password" autocomplete="new-password" placeholder="••••••••">
+      <button class="go" type="submit" id="go">▶ DARME DE ALTA</button>
+    </div>
+    <div class="muerta" id="muerta" style="display:none">
+      <b data-t="mala">INVITACIÓN NO VÁLIDA<br>O YA USADA</b>
+      <span data-t="pide">pídele otra a quien te la mandó</span>
+    </div>
+    <div class="msg" id="msg"></div>
+  </form>
+</main>
+<span id="langSel"><b data-l="es">ES</b>·<b data-l="en">EN</b></span>
+<script src="registro.js?v=1"></script>
+</body>
+</html>

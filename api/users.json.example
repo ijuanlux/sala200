@@ -1,0 +1,4 @@
+{
+  "_comentario": "hash sha256 de 'usuario:clave:TU_SALT' -> nombre. El primero créalo a mano; el resto entran por invitación.",
+  "0000000000000000000000000000000000000000000000000000000000000000": "admin"
+}

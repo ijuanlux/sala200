@@ -1,0 +1,3830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#030503">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="pad.css?v=26">
+<title>SALA 200</title>
+<style>
+  @font-face { font-family: 'PS2P'; src: url('fonts/pressstart2p.ttf') format('truetype'); font-display: swap; }
+  :root { --ph: #39ff88; --cy: #35e9ff; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  body { background: #030503; margin: 0; display: flex; flex-direction: column;
+    font-family: ui-monospace, Menlo, monospace; }
+  #top { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 2px solid #1a3324;
+    background: #020703; flex-wrap: nowrap; }
+  #top a, #top button { font-family: 'PS2P'; font-size: 10px; color: var(--cy); text-decoration: none;
+    background: none; border: 1px solid #1a3324; padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+  #top a:hover, #top button:hover { color: var(--ph); border-color: var(--ph); }
+  #title { font-family: 'PS2P'; font-size: 10px; color: #6fa585; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; flex: 1; min-width: 0; }
+  #hint { font-size: 9px; color: #2c5540; letter-spacing: .1em; white-space: nowrap; }
+  #game { flex: 1; min-height: 0; }
+  /* pantalla completa "a la brava" para iOS, que no soporta la API en divs */
+  body.fs #top { display: none; }
+  body.fs { height: 100dvh; }
+  body.fs { --fs-drop: max(1.2dvh, env(safe-area-inset-top)); }
+  /* el recorte va en el contenedor del lienzo, NO en #game (ahí vive también el mando) */
+  body[data-pantalla="rellenar"] .ejs_canvas_parent,
+  body[data-pantalla="estirar"] .ejs_canvas_parent { overflow: hidden !important; }
+  body.fs #game { position: fixed; left: 0; right: 0; top: var(--fs-drop); width: 100vw;
+    height: calc(100dvh - var(--fs-drop)); z-index: 9999; }
+  body.fs #padPanel { bottom: auto; top: 50%; transform: translate(-50%, -50%); z-index: 10005;
+    flex-wrap: wrap; justify-content: center; max-width: 92vw; }
+  @media (max-width: 820px) { #hint { display: none; } }
+  #padPanel { position: fixed; left: 50%; bottom: 18%; transform: translateX(-50%); z-index: 10000;
+    background: rgba(3,10,6,.93); border: 2px solid #1a3324; padding: 16px 20px; display: none;
+    align-items: center; gap: 14px; }
+  #padPanel.on { display: flex; }
+  #padPanel span { font-family: 'PS2P'; font-size: 9px; color: var(--cy); white-space: nowrap; }
+  #padPanel input { width: 190px; accent-color: #39ff88; }
+  #padPanel button { font-family: 'PS2P'; font-size: 9px; background: none; border: 1px solid #1a3324;
+    color: var(--ph); padding: 8px 10px; }
+  /* en pantalla completa la barra de arriba desaparece: este acceso queda flotando */
+  #padFloat { position: fixed; z-index: 10004; display: none;
+    left: max(8px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top));
+    width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(57,255,136,.45);
+    background: rgba(3,10,6,.55); color: #39ff88; font-size: 17px; line-height: 1;
+    opacity: .35; cursor: pointer; transition: opacity .2s, transform .15s; }
+  #padFloat:hover, #padFloat:active { opacity: 1; transform: scale(1.08); }
+  body.fs #padFloat { display: block; }
+  body.colocando #padFloat { display: none; }
+  /* --- emojis: un solo cartel ligero, nada de lluvia (comía fotogramas en red) --- */
+  #emoBadge { position: fixed; pointer-events: none; z-index: 10007; left: 50%; top: 12%;
+    transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+    background: rgba(3,10,6,.88); border: 2px solid #ffd23f; padding: 8px 14px;
+    animation: subeEmo 2.4s ease forwards; }
+  #emoBadge .e { font-size: 34px; line-height: 1; }
+  #emoBadge b { font-family: 'PS2P'; font-size: 10px; color: #ffe9a8; }
+  @keyframes subeEmo { 0%{opacity:0;transform:translateX(-50%) translateY(10px)}
+    15%{opacity:1;transform:translateX(-50%) translateY(0)}
+    80%{opacity:1} 100%{opacity:0;transform:translateX(-50%) translateY(-14px)} }
+  #emojiBtn { position: fixed; z-index: 10008; right: max(8px, env(safe-area-inset-right));
+    top: max(8px, env(safe-area-inset-top)); width: 42px; height: 42px; border-radius: 50%;
+    border: 2px solid rgba(255,210,63,.5); background: rgba(3,10,6,.55); font-size: 19px;
+    opacity: .4; cursor: pointer; transition: opacity .2s, transform .15s; }
+  #emojiBtn:hover, #emojiBtn:active { opacity: 1; transform: scale(1.08); }
+  #emojiFila { position: fixed; z-index: 10008; right: max(8px, env(safe-area-inset-right));
+    top: calc(max(8px, env(safe-area-inset-top)) + 148px); display: none; flex-wrap: wrap;
+    width: 212px; gap: 4px; background: rgba(3,10,6,.94); border: 2px solid #1a3324; padding: 8px; }
+  #emojiFila.on { display: flex; }
+  #emojiFila { max-height: min(72vh, 480px); overflow-y: auto; overscroll-behavior: contain; }
+  #emojiFila button { width: 36px; height: 36px; font-size: 20px; background: none; border: 1px solid #1a3324;
+    cursor: pointer; }
+  #emojiFila button:active { background: #102117; }
+  #emojiFila .sep { width: 100%; height: 1px; background: #1a3324; margin: 4px 0; }
+  #emojiFila button.frase { width: 100%; height: auto; font-family: 'PS2P'; font-size: 8px;
+    color: #ffd23f; text-align: left; padding: 9px 8px; line-height: 1.5; letter-spacing: .04em; }
+  #emojiFila button.frase:active { background: #241a02; }
+  #emoBadge.frase { border-color: #ff2d55; flex-direction: column; gap: 4px; padding: 10px 16px;
+    max-width: min(88vw, 480px); text-align: center; }
+  #emoBadge.frase b { font-size: 12px; color: #ffd8de; line-height: 1.6; }
+  #emoBadge.frase i { font-style: normal; font-family: 'PS2P'; font-size: 8px; color: #ff2d55; }
+  body.colocando #emojiFila { display: none; }
+  body.colocando #emojiBtn, body.colocando #pantBtn,
+  body.colocando #padFloat, body.colocando #volverBtn, body.colocando #pesetaBtn {
+    display: block !important; opacity: .95 !important;
+    outline: 2px dashed #35e9ff; outline-offset: 3px;
+  }
+  /* --- la moneda de 25 pesetas: INSERT COIN de recreativa --- */
+  #pesetaBtn { position: fixed; z-index: 10008; left: max(10px, env(safe-area-inset-left));
+    bottom: 44%; width: 58px; height: 58px; border-radius: 50%; cursor: pointer; padding: 0;
+    font-family: 'PS2P'; color: #4a3505; line-height: 1.2; text-align: center;
+    background: radial-gradient(circle at 32% 28%, #fff3c4 0%, #f5c842 42%, #c89a2a 78%, #8a6a1c 100%);
+    border: 3px double #8a6a1c;
+    box-shadow: 0 2px 9px rgba(0,0,0,.55), inset 0 0 7px rgba(255,255,255,.4);
+    opacity: .9; transition: transform .12s, opacity .2s; user-select: none; }
+  #pesetaBtn b { display: block; font-size: 16px; }
+  #pesetaBtn i { display: block; font-style: normal; font-size: 6px; letter-spacing: .12em; }
+  #pesetaBtn:hover { opacity: 1; }
+  #pesetaBtn:active { transform: scale(.86); opacity: 1; }
+  #pesetaBtn.echada { animation: monedaCae .45s ease; }
+  @keyframes monedaCae { 35% { transform: translateY(16px) scale(.8) rotate(18deg); } }
+  /* --- modo red: interfaz mínima. Fuera todo lo que desincronice o robe frames --- */
+  body.enred #pantMenu button[data-a="guardar"], body.enred #pantMenu button[data-a="auto"],
+  body.enred #pantMenu button[data-a="cero"], body.enred #pantMenu button[data-a="fuego"],
+  body.enred #pantMenu button[data-a="giro"], body.enred #pmTitPartida { display: none; }
+  /* y en red también sobran el botón de instalar la app y el de tamaño del mando */
+  body.enred #instBtn, body.enred #padFloat { display: none !important; }
+  /* el resincronizar solo tiene sentido EN red */
+  #pmResync { display: none; }
+  body.enred #pmResync { display: block; }
+  /* --- con mando físico conectado, los controles táctiles sobran: menos capas que componer --- */
+  body.conmando .ejs_virtualGamepad_parent, body.conmando .ejs_virtualGamepad_button,
+  body.conmando .ejs_virtualGamepad_left, body.conmando #stick, body.conmando #padFloat {
+    display: none !important;
+  }
+  /* --- monitor: ajustes de pantalla --- */
+  #pantBtn { position: fixed; z-index: 10008; right: max(8px, env(safe-area-inset-right));
+    top: calc(max(8px, env(safe-area-inset-top)) + 100px); width: 42px; height: 42px; border-radius: 50%;
+    border: 2px solid rgba(184,152,255,.5); background: rgba(3,10,6,.55); font-size: 18px;
+    opacity: .4; cursor: pointer; transition: opacity .2s, transform .15s; }
+  #pantBtn:hover, #pantBtn:active { opacity: 1; transform: scale(1.08); }
+  /* Con catorce opciones una sola columna no cabía en pantalla. En rejilla queda
+     cuadradito y entra todo; si aun así no cabe, se puede rodar con el dedo. */
+  #pantMenu { position: fixed; z-index: 10008; right: max(8px, env(safe-area-inset-right));
+    top: calc(max(8px, env(safe-area-inset-top)) + 52px); display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px;
+    width: min(420px, calc(100vw - 24px));
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - 74px);
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    background: rgba(3,10,6,.96); border: 2px solid #1a3324; padding: 9px; }
+  #pantMenu.on { display: grid; }
+  #pantMenu .pm-t { grid-column: 1 / -1; font-family: 'PS2P'; font-size: 8px; color: #b898ff;
+    letter-spacing: .2em; margin-bottom: 2px; position: sticky; top: -9px;
+    background: rgba(3,10,6,.96); padding: 4px 0; z-index: 2; }
+  #pantMenu button { text-align: left; background: none; border: 1px solid #1a3324; color: #d8ffe8;
+    font-family: 'PS2P'; font-size: 8.5px; padding: 9px 8px; cursor: pointer; line-height: 1.45;
+    border-radius: 4px; }
+  #pantMenu button span { display: block; font-family: ui-monospace, monospace; font-size: 8px;
+    color: #3d5c49; margin-top: 3px; }
+  /* los de pantalla completa y ajustar ocupan las dos columnas, que son los gordos */
+  #pantMenu button[data-a="marco"], #pantMenu button[data-a="fs"] { grid-column: 1 / -1; }
+  #pantMenu .pm-sep { grid-column: 1 / -1; }
+  @media (max-width: 430px) { #pantMenu { width: calc(100vw - 20px); font-size: 8px; } }
+  /* tumbado sobra ancho y falta alto: tres columnas y entra todo sin rodar */
+  @media (orientation: landscape) {
+    #pantMenu { width: min(660px, calc(100vw - 24px)); grid-template-columns: repeat(3, minmax(0, 1fr));
+      top: max(6px, env(safe-area-inset-top)); max-height: calc(100dvh - 14px); }
+    #pantMenu button { padding: 7px 7px; }
+    #pantMenu button span { margin-top: 2px; }
+    #pantMenu .pm-t { top: -9px; padding: 3px 0; }
+    #pantMenu button[data-a="marco"], #pantMenu button[data-a="fs"] { grid-column: auto; }
+  }
+  #pantMenu button.on { border-color: #b898ff; color: #b898ff; }
+  #pantMenu button:active { background: #102117; }
+  #pantMenu .pm-sep { height: 1px; background: #102117; margin: 4px 0; }
+  body.colocando #pantMenu { display: none; }
+  /* --- marco ajustable de la pantalla --- */
+  #marcoCaja { position: fixed; z-index: 10008; display: none; border: 3px dashed #b898ff;
+    background: rgba(184,152,255,.06); cursor: move; touch-action: none; user-select: none; }
+  /* con el marco abierto, el mando se aparta para no robar los toques */
+  body:has(#marcoCaja[style*="display: block"]) .ejs_virtualGamepad_parent { pointer-events: none; opacity: .25; }
+  #marcoCaja .mh { position: absolute; width: 40px; height: 40px; background: rgba(3,10,6,.92);
+    border: 3px solid #b898ff; touch-action: none; border-radius: 6px; }
+  #marcoCaja .mh::after { content: ''; position: absolute; inset: 8px; border: 2px solid rgba(184,152,255,.5); }
+  #marcoCaja .nw { left: -20px; top: -20px; cursor: nwse-resize; }
+  #marcoCaja .ne { right: -20px; top: -20px; cursor: nesw-resize; }
+  #marcoCaja .sw { left: -20px; bottom: -20px; cursor: nesw-resize; }
+  #marcoCaja .se { right: -20px; bottom: -20px; cursor: nwse-resize; }
+  #marcoCaja .mtxt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-family: 'PS2P'; font-size: 9px; color: #b898ff; white-space: nowrap; opacity: .8; }
+  #marcoBar { position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top));
+    transform: translateX(-50%) translateY(-30px); z-index: 10020; background: rgba(3,10,6,.96);
+    border: 2px solid #b898ff; color: #e5daff; font-family: 'PS2P'; font-size: 9px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+    opacity: 0; transition: opacity .25s, transform .25s; }
+  #marcoBar.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #marcoBar button { font-family: 'PS2P'; font-size: 10px; background: none; border: 2px solid #b898ff;
+    color: #b898ff; padding: 11px 14px; cursor: pointer; pointer-events: auto; }
+  #marcoBar button:hover { background: #b898ff; color: #1a1030; }
+  #httpsWarn { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%) translateY(30px);
+    z-index: 10002; background: rgba(20,6,6,.96); border: 2px solid #ff2d55; color: #ffd8de;
+    font-size: 12px; line-height: 1.7; padding: 14px 18px; text-align: center; max-width: min(92vw, 460px);
+    opacity: 0; transition: opacity .3s, transform .3s; }
+  #httpsWarn.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* el aviso no debe robar toques a los botones que tiene debajo (START y SELECT) */
+  #httpsWarn { pointer-events: none; }
+  #httpsWarn a { pointer-events: auto; }
+  body.colocando #httpsWarn { display: none; }
+  #httpsWarn a { display: block; margin-top: 10px; color: #39ff88; font-family: 'PS2P'; font-size: 10px; }
+  #npBar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%) translateY(-24px);
+    z-index: 10003; background: rgba(3,10,6,.94); border: 2px solid #1a3324; color: #d8ffe8;
+    font-family: 'PS2P'; font-size: 10px; line-height: 1.9; padding: 12px 18px; text-align: center;
+    max-width: min(94vw, 560px); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #npBar.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* La barra no recibe toques para no estorbar jugando, PERO sus botones sí:
+     sin esto el dedo atravesaba el botón y el móvil se ponía a seleccionar texto. */
+  #npBar button { pointer-events: auto !important; touch-action: manipulation;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+    min-height: 44px; font-size: 11px !important; padding: 12px 18px !important; }
+  #npBar button:active { transform: scale(.96); }
+  #npBar.wait { border-color: #ffd23f; color: #ffe9a8; }
+  #npBar.go { border-color: #39ff88; color: #d8ffe8; box-shadow: 0 0 34px rgba(57,255,136,.25); }
+  #npBar b { color: #39ff88; }
+  #npBar .dots::after { content: ''; animation: np 1.4s steps(4) infinite; }
+  @keyframes np { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+  /* ---- volver al menú, discreto, siempre a mano ---- */
+  #volverBtn { position: fixed; z-index: 10006; display: none;
+    left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top));
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(216,255,232,.32);
+    background: rgba(3,10,6,.42); color: #d8ffe8; font-size: 17px; line-height: 40px;
+    text-align: center; cursor: pointer; opacity: .3;
+    transition: opacity .25s, transform .15s, background .25s; padding: 0; }
+  #volverBtn:active { transform: scale(.9); }
+  #volverBtn.on { display: block; }
+  #volverBtn.listo { opacity: .95; background: rgba(255,45,85,.85); border-color: #ff2d55; }
+  body.colocando #volverBtn { opacity: .95; }
+
+  /* ---- racha de especiales, estilo marcador de recreativa ---- */
+  #comboBox { position: fixed; z-index: 10009; left: 50%; transform: translateX(-50%) scale(.7);
+    top: max(58px, calc(env(safe-area-inset-top) + 52px)); pointer-events: none;
+    text-align: center; opacity: 0; transition: opacity .18s, transform .18s cubic-bezier(.2,1.6,.4,1); }
+  #comboBox.on { opacity: 1; transform: translateX(-50%) scale(1); }
+  #comboBox b { display: block; font-family: 'PS2P'; font-size: 30px; line-height: 1;
+    color: #ffd23f; text-shadow: 0 0 18px rgba(255,150,40,.9), 0 3px 0 #7a2b00; }
+  #comboBox i { display: block; font-style: normal; font-family: 'PS2P'; font-size: 9px;
+    margin-top: 7px; letter-spacing: .16em; color: #ffb060; text-shadow: 0 0 12px rgba(255,120,0,.8); }
+  #comboBox.n5 b, #comboBox.n6 b { color: #ff8a3d; text-shadow: 0 0 24px rgba(255,90,20,1), 0 3px 0 #6b1500; }
+  #comboBox.n7 b, #comboBox.n8 b { color: #9fd8ff; text-shadow: 0 0 26px rgba(80,170,255,1), 0 3px 0 #06294f; }
+  #comboBox.n7 i, #comboBox.n8 i { color: #bfe6ff; }
+  #comboBox.n9 b, #comboBox.n10 b { color: #ffffff; font-size: 38px;
+    text-shadow: 0 0 30px #fff, 0 0 60px rgba(120,200,255,1), 0 4px 0 #04203d;
+    animation: comboLate .28s ease-in-out infinite alternate; }
+  #comboBox.n9 i, #comboBox.n10 i { color: #fff; font-size: 10px; }
+  @keyframes comboLate { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+  /* el mando tiembla cuando la cosa se pone seria */
+  #stick.temblando { animation: temblor .09s steps(2) infinite; }
+  #stick.temblandoMucho { animation: temblorGordo .06s steps(2) infinite; }
+  /* transform, no margin: el margen recoloca (layout) en cada sacudida */
+  @keyframes temblor { from { transform: translateX(-1px); } to { transform: translateX(1px); } }
+  @keyframes temblorGordo { 0% { transform: translate(-2px, -1px); }
+    50% { transform: translate(2px, 1px); } 100% { transform: translate(-1px, 2px); } }
+
+  /* ---- joystick que sustituye a la cruceta ---- */
+  #stick { position: fixed; z-index: 10002; display: none; touch-action: none; user-select: none;
+    width: var(--sala-dpad, 170px); height: var(--sala-dpad, 170px);
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(var(--pill-h, 48px) + max(14px, env(safe-area-inset-bottom))); }
+  html.stick-on #stick { display: block; }
+  html.stick-on .ejs_dpad_main { display: none !important; }
+  /* el contenedor de la cruceta se queda invisible pero sigue existiendo:
+     si no lo desactivamos, se traga los toques del joystick */
+  html.stick-on .ejs_virtualGamepad_left { pointer-events: none !important; opacity: 0 !important; }
+  /* sin aro y casi transparente: solo se insinúa, y despierta al tocarla */
+  #stickBase { position: absolute; inset: 8%; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.14);
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.05), rgba(8,12,18,.22) 70%, transparent 100%);
+    opacity: .38; transition: opacity .25s, border-color .25s; }
+  /* bola de recreativa: la textura se dibuja al vuelo (arañazos, desconchones y roña) */
+  #stickKnob { position: absolute; left: 50%; top: 50%; width: 44%; height: 44%;
+    margin: -22% 0 0 -22%; border-radius: 50%;
+    background-size: cover; background-position: center;
+    box-shadow: 0 7px 18px rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.5),
+                inset 0 -6px 12px rgba(0,0,0,.45);
+    transition: transform .09s ease-out;
+    will-change: transform; }   /* capa propia: la textura y sombras se pintan UNA vez y moverla es gratis */
+  #stick.agarrado #stickKnob { box-shadow: 0 4px 10px rgba(0,0,0,.65),
+    inset 0 -5px 10px rgba(0,0,0,.5), 0 0 22px rgba(255,120,60,.35); }
+  /* mientras la bola está en llamas, se pone al rojo (o al azul) y late */
+  #stickKnob::after { content: ''; position: absolute; inset: -45%; border-radius: 50%;
+    pointer-events: none; opacity: 0; will-change: opacity, transform;
+    background: radial-gradient(circle, rgba(255,170,70,.62) 0%, rgba(255,90,0,.3) 42%, rgba(255,60,0,0) 70%); }
+  #stickKnob.ardiendo { filter: brightness(1.3) saturate(1.3); }
+  #stickKnob.ardiendoAzul { filter: brightness(1.45) saturate(1.1) hue-rotate(-15deg); }
+  #stickKnob.ardiendoAzul::after {
+    background: radial-gradient(circle, rgba(150,215,255,.7) 0%, rgba(40,120,255,.34) 42%, rgba(20,70,255,0) 70%); }
+  #stickKnob.ardiendo::after    { animation: latido .5s ease-in-out infinite alternate; }
+  #stickKnob.ardiendoAzul::after { animation: latido .45s ease-in-out infinite alternate; }
+  /* opacidad y escala las mueve la tarjeta gráfica; box-shadow obligaba a repintar cada fotograma */
+  @keyframes latido {
+    from { opacity: .5; transform: scale(.9); }
+    to   { opacity: .95; transform: scale(1.1); }
+  }
+  #stick.agarrado #stickKnob { transition: none; }
+  #stick.agarrado #stickBase { opacity: .85; border-color: rgba(184,152,255,.6); }
+  body.colocando #stick { outline: 2px dashed #ffd23f; outline-offset: 3px; }
+  /* --- joystick LIGERO: plano y sin sombras (barato de pintar) pero BIEN visible --- */
+  #stick.ligero #stickBase { background: rgba(8, 14, 10, .4);
+    border: 2px solid rgba(57, 255, 136, .5); opacity: .65; }
+  #stick.ligero #stickKnob { background-image: none !important; background: #17452a;
+    border: 3px solid #39ff88; box-shadow: none; }
+  #stick.ligero #stickKnob::after { display: none; }
+  #stick.ligero.agarrado #stickBase { opacity: .9; }
+  #stick.ligero.agarrado #stickKnob { box-shadow: none; background: #206038; }
+
+  /* en ordenador no pintamos el mando táctil ni sus ajustes */
+  html.sin-tacto .ejs_virtualGamepad_parent,
+  html.sin-tacto .ejs_virtualGamepad_button,
+  html.sin-tacto .ejs_virtualGamepad_left,
+  html.sin-tacto .ejs_virtualGamepad_right,
+  html.sin-tacto .ejs_virtualGamepad_top,
+  html.sin-tacto .ejs_virtualGamepad_bottom,
+  html.sin-tacto .ejs_dpad_main { display: none !important; }
+  html.sin-tacto #padFloat, html.sin-tacto #padPanel, html.sin-tacto #colocarBtn { display: none !important; }
+  body.colocando .ejs_virtualGamepad_button,
+  body.colocando .ejs_virtualGamepad_left {
+    outline: 2px dashed #ffd23f; outline-offset: 3px; opacity: .95 !important;
+    cursor: grab; filter: drop-shadow(0 0 12px rgba(255,210,63,.35));
+  }
+  body.colocando .cogido { outline-color: #39ff88; cursor: grabbing; z-index: 10005 !important; }
+  /* En modo colocar había dos capas invisibles comiéndose los toques: los diálogos
+     del emulador (tapaban la R) y la propia barra del modo (tapaba el START).
+     Aquí las desactivamos, salvo los botones de la barra, que sí deben funcionar. */
+  body.colocando .ejs_popup_container, body.colocando .ejs_popup_body,
+  body.colocando .ejs_settings_transition, body.colocando .ejs_context_menu,
+  body.colocando .ejs_menu_bar, body.colocando .ejs_netplay_container { pointer-events: none !important; }
+  #colocarBar { pointer-events: none; }
+  #colocarBar button { pointer-events: auto; touch-action: manipulation; min-height: 40px; }
+  #colocarBar { position: fixed; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%) translateY(-30px);
+    z-index: 10006; background: rgba(3,10,6,.96); border: 2px solid #ffd23f; color: #ffe9a8;
+    font-family: 'PS2P'; font-size: 9px; padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+    opacity: 0; transition: opacity .25s, transform .25s; }
+  #colocarBar.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #colocarBar button { font-family: 'PS2P'; font-size: 9px; background: none; border: 1px solid #ffd23f;
+    color: #ffd23f; padding: 7px 10px; cursor: pointer; }
+  #colocarBar button:hover { background: #ffd23f; color: #201800; }
+  @media (orientation: landscape) and (max-height: 520px) {
+    #colocarBar { font-size: 8px; padding: 8px 10px; gap: 8px; }
+    #colocarBar span { max-width: 46vw; }
+  }
+  #fsToast { position: fixed; left: 50%; top: 14px; transform: translateX(-50%) translateY(-20px);
+    z-index: 10001; background: rgba(3,10,6,.95); border: 2px solid #1a3324; color: #d8ffe8;
+    font-size: 12px; line-height: 1.5; padding: 12px 16px; max-width: min(92vw, 520px); text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+  #fsToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="top">
+  <a href="index.html" id="backLink">◄ SALA 200</a>
+  <span id="title"></span>
+  <button id="instBtn" title="instalar como app" style="display:none">⬇ APP</button>
+  <button id="padBtn" title="tamaño del mando">🎮 ±</button>
+  <button id="fsBtn" title="pantalla completa">⛶ FULL</button>
+  <span id="hint"></span>
+</div>
+<div id="game"></div>
+<div id="npBar"></div>
+<button id="padFloat" title="ajustes del mando">🎮</button>
+<div id="padPanel">
+  <span id="padDiag" style="max-width:280px;white-space:normal;line-height:1.7"></span>
+  <span id="padLbl">MANDO</span>
+  <span id="padTip" style="font-size:8px;color:#3d5c49;white-space:normal;max-width:180px">
+    ✥ COLOCAR para mover los botones · o TRES dedos mantenidos en la pantalla</span>
+  <input id="padRange" type="range" min="0.65" max="1.5" step="0.05">
+  <button id="colocarBtn" title="mover los botones a tu gusto">✥ COLOCAR</button>
+  <button id="resetPad" title="reiniciar mapeo del mando">↺ MANDO</button>
+  <button id="padClose">OK</button>
+</div>
+<script>
+const p = new URLSearchParams(location.search);
+const sysCore = { snes: 'snes9x', nes: 'fceumm', megadrive: 'genesis_plus_gx', neogeo: 'fbneo',
+  arcade: 'fbneo', gb: 'gambatte', gba: 'mgba', psx: 'pcsx_rearmed', n64: 'mupen64plus_next',
+  sms: 'genesis_plus_gx', gg: 'genesis_plus_gx' };
+const sys = p.get('sys') || 'snes';
+document.getElementById('title').textContent = p.get('name') || '';
+document.title = (p.get('name') || 'SALA 200') + ' — SALA 200';
+
+const LANG = localStorage.getItem('sala_lang') || (navigator.language || 'es').slice(0, 2);
+document.getElementById('hint').textContent = LANG === 'en'
+  ? 'GAMEPAD TO YOUR DEVICE · F = FULLSCREEN' : 'MANDO A TU EQUIPO · F = PANTALLA COMPLETA';
+
+/* Textos propios del player. Los menús de EmulatorJS se traducen solos
+   (EJS_language + ejs/localization); esto cubre NUESTRA interfaz. */
+const TP = LANG === 'en' ? {
+  si: 'YES', no: 'NO', cruceta: 'DPAD', joystick: 'JOYSTICK', mando: 'PAD ',
+  bola: 'RED BALL', ligero: 'LIGHT',
+  tsBola: '🔴 Arcade ball', tsLigero: '🟢 Light joystick (runs faster)', tsCruz: 'D-pad back',
+  npEspera: 'WAITING FOR THE OTHER PLAYER', npEnPartida: 'MATCH ON',
+  npUnido: 'JOINED THE MATCH', npSalio: 'LEFT', npEsperando: 'WAITING',
+  npConectando: 'CONNECTING TO', npColega: 'YOUR FRIEND',
+  npFallo: 'FAILED TO SET UP THE MATCH: ',
+  npSync: 'MATCH IN SYNC!', npDale: 'go get them',
+  npCorte: 'LOST CONNECTION TO YOUR RIVAL<br>YOU KEEP PLAYING LOCALLY',
+  npAfk: 'YOUR RIVAL STEPPED AWAY<br>MATCH PAUSED · IT RESUMES BY ITSELF',
+  npVersion: 'IS IT THE SAME GAME FILE?<br>BOTH LEAVE AND REJOIN VIA THE JOIN BUTTON',
+  npAfkFin: 'YOUR RIVAL DID NOT COME BACK<br>YOU KEEP PLAYING LOCALLY',
+  mPantalla: 'SCREEN', mAjustar: '✥ ADJUST SCREEN', mAjustarSub: 'frame it your way',
+  mFull: '⛶ FULLSCREEN', mNormal: '↺ NORMAL SIZE', mGiro: '⟳ ROTATE IMAGE', mSuav: 'SMOOTHING: ',
+  mNoBloq: '☀️ KEEP AWAKE: ', mNoBloqSub: "don't let the phone sleep",
+  mMando: 'CONTROLS', mCrucetaSub: 'dpad or joystick',
+  mHadouken: '🔥 HADOUKEN: ', mHadoukenSub: 'quarter-circle flames · off while online',
+  mPartida: 'GAME', mGuardar: '💾 SAVE NOW', mGuardarSub: 'auto-saves every 45 s',
+  mAuto: '🔁 AUTOSAVE: ', mAutoSub: 'resume where you left off',
+  mCero: '🗑 START OVER', mCeroSub: 'wipes your save',
+  mMal: 'IF SOMETHING BREAKS', mSonido: '🔊 FIX SOUND', mSonidoSub: 'if the game goes mute or quiet',
+  mFps: '📈 METER: ', mFpsSub: 'frames and memory',
+  mMitad: '◧ MY HALF ONLY', mMitadSub: 'for split-screen games (2P)',
+  mResync: '🔄 RESYNC MATCH', mResyncSub: 'if your rival goes crazy on screen',
+  resyncPedida: '🔄 Resyncing the match…',
+  npDesync: 'DESYNC DETECTED<br>RESYNCING AUTOMATICALLY…',
+  mitadOn: '◧ Showing your half · tap again to go back', mitadOff: 'Full screen view back',
+  mitadArmada: '◧ Armed · kicks in when the 2P match starts',
+  colocar: 'PLACE MODE · drag anything · tap the dpad to swap it for a joystick',
+  listo: 'DONE', marcoTit: 'ADJUST THE SCREEN TO YOUR TASTE', marcoDrag: 'drag the center or the corners',
+  autoOn: 'Autosave on', autoOff: 'Autosave off',
+  fuegoOn: 'Fire on', fuegoOff: 'Fire off',
+  pantEstado: 'Screen: ', despEnc: 'kept on', despPid: 'requesting…', despOff: 'off',
+  despNo: 'not available in this browser',
+  tEmoji: 'throw emojis at your rival', tVolver: 'back to the menu',
+} : {
+  si: 'SÍ', no: 'NO', cruceta: 'CRUCETA', joystick: 'JOYSTICK', mando: 'MANDO ',
+  bola: 'BOLA', ligero: 'LIGERO',
+  tsBola: '🔴 Bola de recreativa', tsLigero: '🟢 Joystick ligero (rinde más)', tsCruz: 'Cruceta de vuelta',
+  npEspera: 'ESPERANDO AL OTRO JUGADOR', npEnPartida: 'EN PARTIDA',
+  npUnido: 'SE HA UNIDO A LA PARTIDA', npSalio: 'HA SALIDO', npEsperando: 'ESPERANDO',
+  npConectando: 'CONECTANDO CON', npColega: 'TU COLEGA',
+  npFallo: 'FALLO AL PREPARAR LA PARTIDA: ',
+  npSync: '¡PARTIDA SINCRONIZADA!', npDale: 'dale caña',
+  npCorte: 'SE CORTÓ LA CONEXIÓN CON EL RIVAL<br>SIGUES JUGANDO EN LOCAL',
+  npAfk: 'EL RIVAL HA SALIDO UN MOMENTO<br>PARTIDA EN PAUSA · SIGUE SOLA AL VOLVER',
+  npVersion: '¿SEGURO QUE ES EL MISMO JUEGO?<br>SALID LOS DOS Y ENTRA POR UNIRME',
+  npAfkFin: 'EL RIVAL NO VOLVIÓ<br>SIGUES JUGANDO EN LOCAL',
+  mPantalla: 'PANTALLA', mAjustar: '✥ AJUSTAR PANTALLA', mAjustarSub: 'marco a tu medida',
+  mFull: '⛶ PANTALLA COMPLETA', mNormal: '↺ TAMAÑO NORMAL', mGiro: '⟳ GIRAR IMAGEN', mSuav: 'SUAVIZADO: ',
+  mNoBloq: '☀️ NO BLOQUEAR: ', mNoBloqSub: 'que el móvil no se duerma',
+  mMando: 'MANDO', mCrucetaSub: 'cruceta o joystick',
+  mHadouken: '🔥 HADOUKEN: ', mHadoukenSub: 'llamas al cuarto de círculo · en red se apaga solo',
+  mPartida: 'PARTIDA', mGuardar: '💾 GUARDAR AHORA', mGuardarSub: 'se guarda sola cada 45 s',
+  mAuto: '🔁 AUTOGUARDADO: ', mAutoSub: 'seguir donde lo dejaste',
+  mCero: '🗑 EMPEZAR DE CERO', mCeroSub: 'borra lo guardado',
+  mMal: 'SI ALGO VA MAL', mSonido: '🔊 ARREGLAR SONIDO', mSonidoSub: 'si el juego se queda mudo o bajo',
+  mFps: '📈 MEDIDOR: ', mFpsSub: 'fotogramas y memoria',
+  mMitad: '◧ SOLO MI MITAD', mMitadSub: 'para juegos a pantalla partida (2P)',
+  mResync: '🔄 RESINCRONIZAR', mResyncSub: 'si ves al rival hacer cosas raras',
+  resyncPedida: '🔄 Resincronizando la partida…',
+  npDesync: 'DESINCRONIZACIÓN PILLADA<br>RESINCRONIZANDO SOLA…',
+  mitadOn: '◧ Viendo tu mitad · toca otra vez para volver', mitadOff: 'Vista completa de nuevo',
+  mitadArmada: '◧ Armado · se activa al entrar en partida a dobles',
+  colocar: 'MODO COLOCAR · arrastra lo que quieras · toca la cruceta para cambiarla por joystick',
+  listo: 'LISTO', marcoTit: 'AJUSTA LA PANTALLA A TU GUSTO', marcoDrag: 'arrastra el centro o las esquinas',
+  autoOn: 'Autoguardado activado', autoOff: 'Autoguardado desactivado',
+  fuegoOn: 'Fuego activado', fuegoOff: 'Fuego desactivado',
+  pantEstado: 'Pantalla: ', despEnc: 'encendida', despPid: 'pidiéndolo…', despOff: 'desactivado',
+  despNo: 'no disponible en este navegador',
+  tEmoji: 'lanzar emojis a tu rival', tVolver: 'volver al menú',
+};
+if (LANG === 'en') {   // barra superior y panel del mando, escritos en el HTML
+  const t = (id, v) => { const el = document.getElementById(id); if (el) el.title = v; };
+  t('instBtn', 'install as app'); t('padBtn', 'pad size'); t('fsBtn', 'fullscreen');
+  t('padFloat', 'pad settings'); t('colocarBtn', 'move the buttons around'); t('resetPad', 'reset pad mapping');
+  const pl = document.getElementById('padLbl'); if (pl) pl.textContent = 'PAD';
+  const pt = document.getElementById('padTip');
+  if (pt) pt.textContent = '✥ PLACE to move the buttons · or hold THREE fingers on the screen';
+  const cb = document.getElementById('colocarBtn'); if (cb) cb.textContent = '✥ PLACE';
+}
+
+/* ---------- pantalla completa ----------
+   Chrome/Android/escritorio: API nativa → desaparece TODO el navegador.
+   iOS (Safari y Chrome, ambos WebKit): la API no existe para divs → modo "a la brava". */
+const UA = navigator.userAgent;
+const PLAT = (() => {
+  const ios = /iP(hone|ad|od)/.test(navigator.platform) ||
+              (UA.includes('Mac') && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(UA);
+  const standalone = !!navigator.standalone || matchMedia('(display-mode: standalone)').matches
+                     || matchMedia('(display-mode: fullscreen)').matches;
+  const chrome = /Chrome|CriOS/.test(UA) && !/Edg|OPR/.test(UA);
+  const firefox = /Firefox|FxiOS/.test(UA);
+  const canFS = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  // en iOS ningún navegador puede: todos son WebKit por obligación de Apple
+  const trueFS = canFS && !ios;
+  return { ios, android, standalone, chrome, firefox, canFS, trueFS,
+           touch: navigator.maxTouchPoints > 0 };
+})();
+const IOS = PLAT.ios;
+const CAN_FS = PLAT.canFS;
+/* ¿Hay dedos de por medio? El emulador solo crea la opción "Virtual Gamepad" si detecta
+   pantalla táctil, así que en un ordenador nunca llega a ocultarlo y el mando se queda
+   ahí puesto. Lo tapamos nosotros. */
+const TACTIL = PLAT.touch || matchMedia('(any-pointer: coarse)').matches;
+if (!TACTIL) document.documentElement.classList.add('sin-tacto');
+
+function realFS() { return document.fullscreenElement || document.webkitFullscreenElement; }
+function isFS() { return realFS() || document.body.classList.contains('fs'); }
+
+function toast(msg, ms) {
+  let t = document.getElementById('fsToast');
+  if (!t) { t = document.createElement('div'); t.id = 'fsToast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms || 5200);
+}
+async function tryNative(el) {
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (!req) return false;
+  try { await req.call(el, { navigationUI: 'hide' }); } catch (e) {
+    try { await req.call(el); } catch (e2) { return false; }
+  }
+  return !!realFS();
+}
+async function enterFS() {
+  document.body.classList.add('fs');            // el juego ocupa todo ya mismo
+  if (!IOS) {
+    // 1º toda la página, 2º solo el juego (algunos navegadores lo prefieren)
+    let ok = await tryNative(document.documentElement);
+    if (!ok) ok = await tryNative(document.getElementById('game'));
+    if (ok) {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+      return true;
+    }
+    toast(LANG === 'en' ? 'Your browser refused fullscreen. Install SALA 200 as an app for a clean screen.'
+                        : 'El navegador no permite pantalla completa. Instala SALA 200 como app para verlo limpio.');
+    return false;
+  }
+  // iOS: no existe pantalla completa para webs. Lo decimos claro y ofrecemos la app.
+  scrollTo(0, 1);
+  if (!navigator.standalone) {
+    toast(LANG === 'en' ? 'iOS blocks true fullscreen in browsers · Share ▸ Add to Home Screen for the real thing'
+                        : 'iOS no deja pantalla completa en el navegador · Compartir ▸ Añadir a inicio para tenerla de verdad');
+  }
+  return false;
+}
+function exitFS() {
+  if (realFS()) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+  if (screen.orientation && screen.orientation.unlock) { try { screen.orientation.unlock(); } catch (e) {} }
+  document.body.classList.remove('fs');
+}
+function toggleFS() { isFS() ? exitFS() : enterFS(); }
+
+document.getElementById('fsBtn').addEventListener('click', toggleFS);
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'f' && !/input|textarea/i.test(document.activeElement.tagName)) toggleFS();
+  if (k === 'escape') document.body.classList.remove('fs');
+});
+// si sales del modo nativo con el gesto del sistema, quitamos también el nuestro
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev =>
+  document.addEventListener(ev, () => { if (!realFS()) document.body.classList.remove('fs'); }));
+// cuatro dedos = salir de pantalla completa (tres son para colocar los botones)
+addEventListener('touchstart', e => { if (e.touches.length === 4 && isFS()) exitFS(); });
+
+/* aviso solo donde de verdad no se puede: iOS */
+if (IOS) {
+  const b = document.getElementById('fsBtn');
+  b.title = 'pantalla completa (en iOS, instala la web como app para que sea total)';
+}
+
+/* ---------- el mando necesita HTTPS ---------- */
+const SEGURO = window.isSecureContext;
+if (!SEGURO) {
+  setTimeout(() => {
+    const t = document.createElement('div');
+    t.id = 'httpsWarn';
+    t.innerHTML = (LANG === 'en'
+      ? 'Gamepads only work over HTTPS.<br>Open the secure address:'
+      : 'El mando solo funciona en HTTPS.<br>Abre la dirección segura:') +
+      `<a href="${'https://sala200.TU-TAILNET.ts.net'}/juegos/">${'https://sala200.TU-TAILNET.ts.net'.replace('https://','')}</a>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('on'), 50);
+    t.addEventListener('click', e => { if (e.target.tagName !== 'A') t.remove(); });
+  }, 2500);
+}
+
+/* ---------- identidad en red: el nombre del socio, no "Player 1" ---------- */
+let SALA_USER = localStorage.getItem('sala_user') || '';
+fetch('/api/me').then(r => r.json()).then(d => { if (d.user) { SALA_USER = d.user; localStorage.setItem('sala_user', d.user); } }).catch(() => {});
+
+/* El diálogo de "Player Name" del netplay lo rellena ponerNombreNetplay (más abajo).
+   Antes había además un MutationObserver de página entera que re-escaneaba todos los
+   inputs en CADA cambio del DOM: puro lastre en mitad de la partida. Fuera. */
+
+// contamos la partida en red en el perfil (y el vigilante se jubila en cuanto cumple)
+let netCounted = false;
+const tNetCount = setInterval(() => {
+  const em = window.EJS_emulator;
+  if (!netCounted && em && em.netplay && em.netplay.owner !== undefined && em.netplay.name) {
+    netCounted = true;
+    clearInterval(tNetCount);
+    fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: 'netplay' }) }).catch(() => {});
+  }
+}, 4000);
+
+/* ---------- tiempo jugado: se lo mandamos al perfil al salir ---------- */
+const t0 = Date.now();
+function reportarTiempo() {
+  const seg = Math.round((Date.now() - t0) / 1000);
+  if (seg < 20) return;
+  const body = JSON.stringify({ tipo: 'tiempo', seg });
+  if (navigator.sendBeacon) navigator.sendBeacon('/api/event', new Blob([body], { type: 'application/json' }));
+}
+addEventListener('pagehide', reportarTiempo);
+addEventListener('beforeunload', reportarTiempo);
+
+/* ---------- automático: cada plataforma por su mejor camino ---------- */
+let autoDone = false;
+function autoFullscreen() {
+  if (autoDone) return; autoDone = true;
+  if (PLAT.standalone) { document.body.classList.add('fs'); return; }   // ya instalada: limpio de serie
+  if (PLAT.trueFS && PLAT.touch) enterFS();                             // Android/Chrome: nativa al primer toque
+  else if (PLAT.ios && !localStorage.getItem('sala_iostip')) {          // iPhone: se explica una vez
+    localStorage.setItem('sala_iostip', '1');
+    setTimeout(() => toast(LANG === 'en'
+      ? 'iOS blocks fullscreen for web pages · tap ⬇ APP to install and play with no bars'
+      : 'iOS no permite pantalla completa a las webs · pulsa ⬇ APP para instalarla y jugar sin barras', 7000), 1200);
+  }
+}
+['pointerdown', 'touchend'].forEach(ev =>
+  document.getElementById('game').addEventListener(ev, autoFullscreen, { once: true, passive: true }));
+
+/* ---------- instalar como app: pantalla completa de verdad en cualquier móvil ---------- */
+let deferredPrompt = null;
+const instBtn = document.getElementById('instBtn');
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e; instBtn.style.display = '';
+});
+instBtn.addEventListener('click', async () => {
+  if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; instBtn.style.display = 'none'; }
+  else toast(LANG === 'en' ? 'Share ▸ Add to Home Screen' : 'Compartir ▸ Añadir a pantalla de inicio');
+});
+if (PLAT.ios && !PLAT.standalone) instBtn.style.display = '';
+if (PLAT.standalone) instBtn.style.display = 'none';
+// si ya está instalada, entra en pantalla completa sola
+if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
+  document.body.classList.add('fs');
+}
+
+/* ---------- mandos virtuales para móvil ---------- */
+document.body.classList.add('sys-' + sys);
+// en horizontal hay poca altura: los botones se juntan y se suben
+const LAND = innerWidth > innerHeight;
+/* ---- tamaño del mando: se adapta a CUALQUIER pantalla ----
+   Las posiciones viven en pad.css como múltiplos de --sala-btn, así que aquí
+   solo hay que decidir cuánto miden botón y cruceta y todo se recoloca solo. */
+const USER_SCALE = parseFloat(localStorage.getItem('sala_padscale') || '1');
+function padBase() {
+  const vv = window.visualViewport;                    // en Android la barra del navegador roba alto
+  const W = Math.round(vv ? vv.width : innerWidth);
+  const H = Math.round(vv ? vv.height : innerHeight);
+  const land = W > H;
+  const short = Math.min(W, H), long = Math.max(W, H);
+
+  // punto de partida: proporción del lado corto, con topes por si es tablet o pantalla enorme
+  let btn = short * (land ? .175 : .155);
+  /* la cruceta iba muy grande en proporción a los botones; más contenida.
+     Ojo: deslizar el dedo FUERA de ella sigue funcionando (el toque pertenece
+     al elemento donde empezó), así que encogerla no te corta los movimientos. */
+  let dpad = short * (land ? .41 : .355);
+  // márgenes razonables en cualquier caso
+  btn = Math.min(Math.max(btn, 42), 110);
+  dpad = Math.min(Math.max(dpad, 96), 235);
+
+  // ancho: cruceta + bloque de botones (3.15 botones) + separación mínima
+  const fitsW = () => dpad + btn * 3.15 + Math.max(36, W * .06) <= W;
+  // alto: la pila completa = pastillas + bloque + hueco + gatillos, con margen
+  // en horizontal las pastillas van arriba y el mando sobresale por abajo: ocupa menos alto
+  const stackH = () => land
+    ? Math.max(dpad, btn * 3.15) * .8 + btn * .82 + 10
+    : btn * .72 + 12 + Math.max(dpad, btn * 3.15) + btn * .28 + btn * .95 + btn * .82 + 14;
+  const fitsH = () => stackH() <= H * (land ? .98 : .66);
+  let guard = 0;
+  while ((!fitsW() || !fitsH()) && guard++ < 60) { btn *= .97; dpad *= .97; }
+
+  return { btn, dpad };
+}
+function applyPadSizeBase() { return padBase(); }
+function applyPadSize() {
+  const scale = parseFloat(localStorage.getItem('sala_padscale') || '1');
+  const b = padBase();
+  const btn = Math.round(b.btn * scale), dpad = Math.round(b.dpad * scale);
+  document.documentElement.style.setProperty('--sala-btn', btn + 'px');
+  document.documentElement.style.setProperty('--sala-dpad', dpad + 'px');
+  return btn;
+}
+const BTN = applyPadSize();
+// el tamaño de la letra sí lo fija EmulatorJS al crear los botones
+const FS = Math.max(12, Math.round(BTN * .28));
+const PILL = Math.max(9, Math.round(BTN * .16));
+const GAP = Math.round(BTN * 1.12);   // solo para el respaldo si el CSS no cargara
+const TIGHT = LAND && innerHeight <= 400;
+
+const DPAD = { type: 'dpad', location: 'left', left: 0, top: 0, joystickInput: false,
+  inputValues: [4, 5, 6, 7] };
+const START_SELECT = [
+  { type: 'button', text: 'SELECT', id: 'select', location: 'center', left: -86, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 2 },
+  { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 3 },
+];
+// diamante clásico: (izq, abajo, arriba, der) alrededor de un centro
+const DIA = { l: 0, b: GAP, t: 0, r: GAP * 2 };
+const PADS = {
+  // MEGA DRIVE: A B C en arco ascendente + X Y Z encima (pad de 6 botones)
+  // MEGA DRIVE: como el mando original de tres botones. Sin X Y Z y sin SELECT,
+  // que la consola no lo tiene. START sí, o no se podría empezar a jugar.
+  megadrive: [DPAD,
+    { type: 'button', text: 'A', id: 'a', location: 'right', left: 0,       top: GAP * 1.25, fontSize: FS, input_value: 0 },
+    { type: 'button', text: 'B', id: 'b', location: 'right', left: GAP,     top: GAP * .98,  fontSize: FS, input_value: 8 },
+    { type: 'button', text: 'C', id: 'c', location: 'right', left: GAP * 2, top: GAP * .72,  fontSize: FS, input_value: 9 },
+    { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10,
+      fontSize: PILL, block: true, input_value: 3 }],
+  // NEO GEO: A B C D en diamante, como el AES
+  /* MASTER SYSTEM: dos botones y ya está, como el mando original.
+     El botón de pausa de la consola es START para el emulador. */
+  sms: [DPAD,
+    { type: 'button', text: '1', id: 'a', location: 'right', left: 0,       top: GAP * 1.05, fontSize: FS, input_value: 0 },
+    { type: 'button', text: '2', id: 'b', location: 'right', left: GAP * 1.15, top: GAP * .75, fontSize: FS, input_value: 8 },
+    { type: 'button', text: 'PAUSA', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10,
+      fontSize: PILL, block: true, input_value: 3 }],
+
+  /* GAME GEAR: igual que la Master System pero con START de verdad */
+  gg: [DPAD,
+    { type: 'button', text: '1', id: 'a', location: 'right', left: 0,       top: GAP * 1.05, fontSize: FS, input_value: 0 },
+    { type: 'button', text: '2', id: 'b', location: 'right', left: GAP * 1.15, top: GAP * .75, fontSize: FS, input_value: 8 },
+    { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10,
+      fontSize: PILL, block: true, input_value: 3 }],
+
+  /* PLAYSTATION · DUALSHOCK: los cuatro símbolos en su diamante con los colores
+     de Sony (✕ azul, ○ rojo, ▢ rosa, △ verde), los cuatro gatillos arriba en dos
+     alturas como en el mando real, y el stick analógico a la izquierda.
+     Cableado: ✕=0 ○=8 ▢=1 △=9 · L1=10 R1=11 L2=12 R2=13 · SELECT=2 START=3 */
+  psx: [DPAD,
+    { type: 'button', text: '✕', id: 'a', location: 'right', left: GAP,       top: GAP * 2,   fontSize: FS + 2, input_value: 0 },
+    { type: 'button', text: '○', id: 'b', location: 'right', left: GAP * 2,   top: GAP,       fontSize: FS + 2, input_value: 8 },
+    { type: 'button', text: '▢', id: 'y', location: 'right', left: 0,         top: GAP,       fontSize: FS + 2, input_value: 1 },
+    { type: 'button', text: '△', id: 'x', location: 'right', left: GAP,       top: 0,         fontSize: FS + 2, input_value: 9 },
+    { type: 'button', text: 'L2', id: 'l2', location: 'top', left: 16,  top: 10, fontSize: PILL, input_value: 12 },
+    { type: 'button', text: 'R2', id: 'r2', location: 'top', left: -16, top: 10, fontSize: PILL, input_value: 13 },
+    { type: 'button', text: 'L1', id: 'l',  location: 'top', left: 16,  top: 10, fontSize: PILL, input_value: 10 },
+    { type: 'button', text: 'R1', id: 'r',  location: 'top', left: -16, top: 10, fontSize: PILL, input_value: 11 },
+    ...START_SELECT],
+
+  /* NEO GEO: los cuatro botones en fila curvada como en el mueble arcade,
+     con sus colores de verdad (A rojo, B amarillo, C verde, D azul).
+     Cableado: A=0, B=8, C=1, D=9, que es lo que espera el núcleo FBNeo. */
+  neogeo: [DPAD,
+    { type: 'button', text: 'A', id: 'a', location: 'right', left: 0,          top: GAP * 1.35, fontSize: FS, input_value: 0 },
+    { type: 'button', text: 'B', id: 'b', location: 'right', left: GAP * .95,  top: GAP * 1.0,  fontSize: FS, input_value: 8 },
+    { type: 'button', text: 'C', id: 'c', location: 'right', left: GAP * 1.9,  top: GAP * .78,  fontSize: FS, input_value: 1 },
+    { type: 'button', text: 'D', id: 'd', location: 'right', left: GAP * 2.85, top: GAP * .74,  fontSize: FS, input_value: 9 },
+    { type: 'button', text: 'COIN', id: 'select', location: 'center', left: -86, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 2 },
+    { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 3 }],
+  // SNES: diamante Y/X/B/A en su posición real + gatillos L y R arriba
+  snes: [DPAD,
+    { type: 'button', text: 'A', id: 'a', location: 'right', left: GAP * 2, top: GAP,       fontSize: FS, input_value: 8 },
+    { type: 'button', text: 'B', id: 'b', location: 'right', left: GAP,     top: GAP * 2,   fontSize: FS, input_value: 0 },
+    { type: 'button', text: 'X', id: 'x', location: 'right', left: GAP,     top: 0,         fontSize: FS, input_value: 9 },
+    { type: 'button', text: 'Y', id: 'y', location: 'right', left: 0,       top: GAP,       fontSize: FS, input_value: 1 },
+    { type: 'button', text: 'L', id: 'l', location: 'top', left: 14, top: 10, fontSize: PILL + 1, input_value: 10 },
+    { type: 'button', text: 'R', id: 'r', location: 'top', left: -14, top: 10, fontSize: PILL + 1, input_value: 11 },
+    ...START_SELECT],
+
+  /* NINTENDO 64: el mando de verdad tiene A azul grande, B verde a su lado,
+     los cuatro C amarillos en rombo, gatillos L y R, la Z por debajo y START rojo.
+     Los C no son botones normales para el emulador: van por el stick derecho,
+     así que se mandan como valor analógico (joystickInput) o no responden. */
+  n64: [
+    /* En la N64 se juega con el stick analógico, no con la cruceta: casi ningún
+       juego mira la cruceta digital. El emulador trae un stick de verdad ("zone"),
+       que es lo que ponemos por defecto; con el botón 🕹 se cambia a la bola de recreativa. */
+    { type: 'zone', id: 'stick', location: 'left', left: '50%', top: '50%',
+      joystickInput: true, inputValues: [16, 17, 18, 19] },
+    { type: 'button', text: 'B',  id: 'b',  location: 'right', left: 0,          top: GAP * .95, fontSize: FS,     input_value: 1 },
+    { type: 'button', text: 'A',  id: 'a',  location: 'right', left: GAP * .62,  top: GAP * 1.7, fontSize: FS + 2, input_value: 0 },
+    { type: 'button', text: '▲',  id: 'cu', location: 'right', left: GAP * 1.95, top: GAP * .18, fontSize: FS - 6, input_value: 23, joystickInput: true },
+    { type: 'button', text: '◀',  id: 'cl', location: 'right', left: GAP * 1.42, top: GAP * .82, fontSize: FS - 6, input_value: 21, joystickInput: true },
+    { type: 'button', text: '▶',  id: 'cr', location: 'right', left: GAP * 2.48, top: GAP * .82, fontSize: FS - 6, input_value: 20, joystickInput: true },
+    { type: 'button', text: '▼',  id: 'cd', location: 'right', left: GAP * 1.95, top: GAP * 1.46, fontSize: FS - 6, input_value: 22, joystickInput: true },
+    { type: 'button', text: 'Z',  id: 'z',  location: 'top', left: 0,   top: 10, fontSize: PILL + 1, input_value: 12 },
+    { type: 'button', text: 'L',  id: 'l',  location: 'top', left: 14,  top: 10, fontSize: PILL + 1, input_value: 10 },
+    { type: 'button', text: 'R',  id: 'r',  location: 'top', left: -14, top: 10, fontSize: PILL + 1, input_value: 11 },
+    { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10,
+      fontSize: PILL, block: true, input_value: 3 }],
+};
+PADS.arcade = PADS.neogeo;
+if (PADS[sys]) window.EJS_VirtualGamepadSettings = PADS[sys];
+
+/* ---- ajuste de tamaño del mando (cada mano es un mundo) ---- */
+const padPanel = document.getElementById('padPanel');
+const padRange = document.getElementById('padRange');
+padRange.value = USER_SCALE;
+document.getElementById('padBtn').addEventListener('click', () => padPanel.classList.toggle('on'));
+document.getElementById('padFloat').addEventListener('click', () => padPanel.classList.toggle('on'));
+document.getElementById('padClose').addEventListener('click', () => padPanel.classList.remove('on'));
+padRange.addEventListener('input', () => {
+  const v = parseFloat(padRange.value);
+  localStorage.setItem('sala_padscale', v);
+  const base = applyPadSizeBase();
+  document.documentElement.style.setProperty('--sala-btn', Math.round(base.btn * v) + 'px');
+  document.documentElement.style.setProperty('--sala-dpad', Math.round(base.dpad * v) + 'px');
+  document.getElementById('padLbl').textContent = TP.mando + Math.round(v * 100) + '%';
+  padAwake();
+});
+
+/* ---------- asignar el mando al jugador 1 ----------
+   EmulatorJS solo lo hace si su menú de controles ya existe cuando conectas el mando,
+   y además usa la ranura 0; si el sistema te da la 1 (pasa a menudo en macOS) no responde nada.
+   Aquí lo asignamos a mano en cuanto haya emulador y mando. */
+let padAsignado = false;
+function asignarMando() {
+  if (!conMando) return;                     // sin mando real no hay nada que asignar
+  const em = window.EJS_emulator;
+  if (!em || padAsignado) return;
+  const p = padReal();                       // el de verdad, no un fantasma de Android
+  if (!p) return;
+  const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean)
+               .filter(x => x !== p);        // los demás, por si hay un segundo mando real
+  const etiqueta = p.id + '_' + p.index;
+  try {
+    if (!Array.isArray(em.gamepadSelection)) em.gamepadSelection = ['', '', '', ''];
+    // el primer mando manda: jugador 1
+    if (em.gamepadSelection[0] !== etiqueta) {
+      em.gamepadSelection[0] = etiqueta;
+      if (typeof em.updateGamepadLabels === 'function') em.updateGamepadLabels();
+      if (typeof em.saveSettings === 'function') em.saveSettings();
+    }
+    // si hay un segundo mando real, al jugador 2
+    const p2 = pads.find(x => x.buttons && x.buttons.length >= 4);
+    if (p2) em.gamepadSelection[1] = p2.id + '_' + p2.index;
+    padAsignado = true;
+    const d = document.getElementById('padDiag');
+    if (d) d.dataset.asignado = '1';
+  } catch (e) {}
+}
+setInterval(asignarMando, 1000);
+addEventListener('gamepadconnected', () => { padAsignado = false; setTimeout(asignarMando, 200); });
+
+/* ---------- mando físico conectado: fuera los controles táctiles ----------
+   Docenas de botones semitransparentes encima del canvas se componen en cada
+   fotograma aunque nadie los toque. Con mando de verdad, no pintan nada. */
+let conMando = false;
+function vigilarMandoFisico() {
+  /* solo cuenta un mando DE VERDAD (padReal filtra los dispositivos fantasma de
+     Android): si no, escondíamos el táctil por un fantasma y te quedabas sin nada */
+  const hay = !!padReal();
+  if (hay === conMando) return;
+  conMando = hay;
+  document.body.classList.toggle('conmando', hay);
+  if (hay) repararBindings();
+  if (TACTIL) toast(hay
+    ? (LANG === 'en' ? '🎮 Gamepad connected · touch controls hidden' : '🎮 Mando conectado · controles táctiles fuera')
+    : (LANG === 'en' ? 'Gamepad gone · touch controls back' : 'Mando desconectado · vuelven los controles táctiles'), 2600);
+}
+/* Reparación del camino "oficial" de EmulatorJS, por si el nuestro no cubre un
+   mando raro: (1) los ajustes guardados por juego pueden venir de una versión
+   vieja SIN value2 (binding de mando) y machacan los buenos al cargar: se los
+   reponemos; (2) su menú de ajustes nace con display "" y el emulador exige
+   exactamente "none" para escuchar el mando: lo normalizamos. */
+function repararBindings() {
+  const em = window.EJS_emulator;
+  if (!em || !em.controls) return;
+  try {
+    const def = (window.EJS_defaultControls || {})[0] || {};
+    em.controls[0] = em.controls[0] || {};
+    for (const k in def) {
+      em.controls[0][k] = em.controls[0][k] || {};
+      if (em.controls[0][k].value2 === undefined && def[k].value2 !== undefined)
+        em.controls[0][k].value2 = def[k].value2;
+    }
+    if (typeof em.checkGamepadInputs === 'function') em.checkGamepadInputs();
+    if (em.settingsMenu && !em.settingsMenuOpen && em.settingsMenu.style.display === '')
+      em.settingsMenu.style.display = 'none';
+  } catch (e) {}
+}
+vigilarMandoFisico();
+setInterval(vigilarMandoFisico, 2000);
+/* y tras arrancar el juego, porque loadSettings restaura los controles guardados
+   DESPUÉS y podría volver a pisar los bindings recién reparados */
+[3000, 8000].forEach(t => setTimeout(repararBindings, t));
+addEventListener('gamepadconnected', () => setTimeout(vigilarMandoFisico, 100));
+addEventListener('gamepaddisconnected', () => setTimeout(vigilarMandoFisico, 100));
+
+
+/* ---------- avisar a la sala de que estoy jugando ---------- */
+function latirJuego() {
+  fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ donde: 'juego', juego: p.get('name') || '', sys,
+                           dev: (matchMedia('(pointer: coarse)').matches || innerWidth < 821) ? 'movil' : 'pc',
+                           rom: p.get('rom') || '', sala: !!(window.EJS_emulator && window.EJS_emulator.netplay
+                                                             && window.EJS_emulator.netplay.playerID) }) }).catch(() => {});
+}
+latirJuego(); setInterval(latirJuego, 20000);
+
+
+/* ================= VIBRACIÓN =================
+   Android: API estándar. iPhone: Apple no la implementa, pero desde iOS 17.4 un
+   interruptor nativo (<input type="checkbox" switch>) sí produce háptica al cambiar,
+   así que lo usamos como sustituto. */
+let hapSwitch = null, hapLabel = null;
+function prepararHaptica() {
+  if (hapSwitch) return;
+  hapSwitch = document.createElement('input');
+  hapSwitch.type = 'checkbox';
+  hapSwitch.setAttribute('switch', '');
+  hapSwitch.id = 'hapSw';
+  hapSwitch.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  hapLabel = document.createElement('label');
+  hapLabel.setAttribute('for', 'hapSw');
+  hapLabel.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  document.body.appendChild(hapSwitch);
+  document.body.appendChild(hapLabel);
+}
+function vibrar(ms) {
+  try {
+    if (navigator.vibrate && navigator.vibrate(ms || 15)) return true;   // Android
+  } catch (e) {}
+  try {                                                                   // iPhone
+    prepararHaptica();
+    hapLabel.click();
+    return true;
+  } catch (e) {}
+  return false;
+}
+
+/* ================= EMOJIS =================
+   Un cartel único y ligero (nada de lluvia de spans animados: comía fotogramas
+   justo cuando el lockstep necesita todos). Viaja por el MISMO socket del
+   netplay como mensaje s2:'emo', así que llega al instante y sin sondear la API. */
+const EMOJIS = ['💀', '☠️', '🔥', '😈', '🖕', '🤡', '💣', '💥',
+                '🔪', '⚔️', '🩸', '🥊', '👊', '😤', '🐍', '🦂',
+                '🥶', '😏', '🏴‍☠️', '👑'];
+
+function mostrarEmoji(emoji, quien) {
+  const viejo = document.getElementById('emoBadge');
+  if (viejo) viejo.remove();                       // uno como mucho en pantalla
+  const b = document.createElement('div');
+  b.id = 'emoBadge';
+  b.innerHTML = `<span class="e"></span>${quien ? '<b></b>' : ''}`;
+  b.querySelector('.e').textContent = emoji;
+  if (quien) b.querySelector('b').textContent = quien.toUpperCase();
+  document.body.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+  setTimeout(() => { if (b.parentElement) b.remove(); }, 3200);   // red de seguridad
+}
+/* el pique de recreativa: frase lanzada, cartelón en la pantalla del rival
+   y, si su navegador tiene voces, se la DICE en alto (síntesis del sistema,
+   nada de micro ni sesiones de audio raras) */
+const FRASES = [
+  ['🔫', '¡UN TIRO TE PEGUEN!'],
+  ['🔥', '¡TE FUNDO!'],
+  ['🔪', '¡LAS TRIPAS TE SAQUEN!'],
+  ['⛓️', '¡AMARRAO TE LLEVEN!'],
+  ['🙏', '¡REZA LO QUE SEPAS!'],
+  ['⚰️', '¡ESTÁS MUERTO!'],
+  ['📦', '¡ERES UN PAQUETE!'],
+  ['😴', '¡A DORMIR!'],
+  ['🐟', '¡SOY EL CARPA DE CAÑORROTO, MIERDAS!'],
+];
+function decir(texto) {
+  try {
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(texto.toLowerCase());
+    u.lang = 'es-ES'; u.rate = 1.05; u.pitch = .9; u.volume = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function mostrarFrase(texto, icono, quien) {
+  const viejo = document.getElementById('emoBadge');
+  if (viejo) viejo.remove();
+  const b = document.createElement('div');
+  b.id = 'emoBadge'; b.className = 'frase';
+  b.innerHTML = '<span class="e"></span><b></b>' + (quien ? '<i></i>' : '');
+  b.querySelector('.e').textContent = icono || '💀';
+  b.querySelector('b').textContent = texto;
+  if (quien) b.querySelector('i').textContent = '— ' + quien.toUpperCase();
+  document.body.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+  setTimeout(() => { if (b.parentElement) b.remove(); }, 3600);
+}
+function lanzarFrase(icono, texto) {
+  const em = window.EJS_emulator;
+  if (!em || !em.isNetplay || !em.netplay || !em.netplay.socket) { sinRival(); return; }
+  mostrarFrase(texto, icono, null);
+  vibrar([20, 30, 40]);
+  lkEnviar(em, { s2: 'emo', e: icono, f: texto, de: quienSoy() });
+}
+function sinRival() {
+  toast(LANG === 'en' ? 'Only works in a 2-player room' : 'Solo funciona en sala de 2 jugadores', 2600);
+}
+function lanzarEmoji(emoji) {
+  const em = window.EJS_emulator;
+  if (!em || !em.isNetplay || !em.netplay || !em.netplay.socket) { sinRival(); return; }
+  mostrarEmoji(emoji, null);                      // lo ves al instante
+  vibrar(18);
+  lkEnviar(em, { s2: 'emo', e: emoji, de: quienSoy() });
+}
+
+function montarEmojis() {
+  if (document.getElementById('emojiBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'emojiBtn'; b.textContent = '😀';
+  b.title = TP.tEmoji;
+  document.body.appendChild(b);
+  const fila = document.createElement('div');
+  fila.id = 'emojiFila';
+  fila.innerHTML = EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('') +
+    '<div class="sep"></div>' +
+    FRASES.map((f, i) => `<button class="frase" data-i="${i}">${f[0]} ${f[1]}</button>`).join('');
+  document.body.appendChild(fila);
+  b.onclick = () => fila.classList.toggle('on');
+  fila.addEventListener('click', ev => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.i !== undefined) {
+      const f = FRASES[+btn.dataset.i];
+      if (f) lanzarFrase(f[0], f[1]);
+    } else if (btn.dataset.e) {
+      lanzarEmoji(btn.dataset.e);
+    }
+    fila.classList.remove('on');
+  });
+}
+montarEmojis();
+
+/* ================= LA MONEDA DE 25 PESETAS =================
+   INSERT COIN de recreativa: en FBNeo la moneda es el input SELECT (2).
+   Pasa por gameManager.simulateInput, así que en red viaja por el lockstep
+   como cualquier botón: cada jugador echa SU moneda (la del invitado entra
+   como moneda del jugador 2, igual que en el mueble de verdad). */
+function echarMoneda() {
+  const em = window.EJS_emulator;
+  if (!em || !em.started || !em.gameManager) {
+    toast(LANG === 'en' ? 'Wait for the game to load' : 'Espera a que cargue el juego', 1800);
+    return;
+  }
+  try {
+    em.gameManager.simulateInput(0, 2, 1);
+    setTimeout(() => { try { em.gameManager.simulateInput(0, 2, 0); } catch (e) {} }, 120);
+  } catch (e) { return; }
+  vibrar([15, 40, 25]);
+  npPito([2093, 1568, 2637], .22, .09);                  // clink de la moneda al caer
+  const b = document.getElementById('pesetaBtn');
+  if (b) { b.classList.remove('echada'); void b.offsetWidth; b.classList.add('echada'); }
+  toast(LANG === 'en' ? '🪙 Coin in · 25 ptas' : '🪙 Moneda dentro · 25 ptas', 1400);
+}
+function montarPeseta() {
+  if (sys !== 'arcade' && sys !== 'neogeo') return;       // solo donde hay ranura
+  if (document.getElementById('pesetaBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'pesetaBtn';
+  b.title = LANG === 'en' ? 'insert coin' : 'echar una moneda (INSERT COIN)';
+  b.innerHTML = '<b>25</b><i>PTAS</i>';
+  document.body.appendChild(b);
+  b.addEventListener('click', echarMoneda);
+}
+montarPeseta();
+
+
+
+/* ================= MARCO DE PANTALLA AJUSTABLE =================
+   Un rectángulo que colocas y estiras a tu gusto: el juego se dibuja justo ahí.
+   Se guarda por consola y orientación, y viaja con tu perfil. */
+const MARCOKEY = () => `sala_marco_${sys}_${innerWidth > innerHeight ? 'h' : 'v'}`;
+let marco = null, marcoEdit = false, marcoDrag = null;
+try { marco = JSON.parse(localStorage.getItem(MARCOKEY()) || 'null'); } catch (e) { marco = null; }
+fetch('/api/padlayout').then(r => r.json()).then(d => {
+  const m = (d.layout || {})[MARCOKEY()];
+  if (m && m.w) { marco = m; localStorage.setItem(MARCOKEY(), JSON.stringify(m)); aplicarMarco(); }
+}).catch(() => {});
+
+function lienzo() { return document.querySelector('canvas.ejs_canvas'); }
+function guardarMarco() {
+  if (!marco) return;
+  localStorage.setItem(MARCOKEY(), JSON.stringify(marco));
+  clearTimeout(window._gm);
+  window._gm = setTimeout(() => {
+    fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clave: MARCOKEY(), pos: marco }) }).catch(() => {});
+  }, 900);
+}
+function aplicarMarco() {
+  const c = lienzo();
+  if (!c) return;
+  if (!marco) {
+    ['position', 'left', 'top', 'width', 'height', 'max-width', 'max-height', 'z-index'].forEach(p => c.style.removeProperty(p));
+    return;
+  }
+  const S = c.style;
+  S.setProperty('position', 'fixed', 'important');
+  S.setProperty('left', Math.round(marco.x * innerWidth) + 'px', 'important');
+  S.setProperty('top', Math.round(marco.y * innerHeight) + 'px', 'important');
+  S.setProperty('width', Math.round(marco.w * innerWidth) + 'px', 'important');
+  S.setProperty('height', Math.round(marco.h * innerHeight) + 'px', 'important');
+  S.setProperty('max-width', 'none', 'important');
+  S.setProperty('max-height', 'none', 'important');
+  S.setProperty('z-index', '1', 'important');   // por debajo del mando, o tapaba L y R
+  const caja = document.getElementById('marcoCaja');
+  if (caja && marcoEdit) {
+    caja.style.left = (marco.x * innerWidth) + 'px';
+    caja.style.top = (marco.y * innerHeight) + 'px';
+    caja.style.width = (marco.w * innerWidth) + 'px';
+    caja.style.height = (marco.h * innerHeight) + 'px';
+  }
+}
+function marcoPorDefecto() {
+  const c = lienzo();
+  const r = c ? c.getBoundingClientRect() : null;
+  return (r && r.width > 20)
+    ? { x: r.left / innerWidth, y: r.top / innerHeight, w: r.width / innerWidth, h: r.height / innerHeight }
+    : { x: .06, y: .08, w: .88, h: .74 };
+}
+function editarMarco(v) {
+  marcoEdit = v;
+  let caja = document.getElementById('marcoCaja');
+  if (v) {
+    if (!marco || !marco.w) marco = marcoPorDefecto();
+    if (!caja) { caja = crearCaja(); }
+    caja.style.display = 'block';
+    aplicarMarco();
+    barraMarco(true);
+  } else {
+    if (caja) { caja.style.display = 'none'; caja.remove(); }     // fuera del todo
+    marcoDrag = null;
+    barraMarco(false);
+    const b = document.getElementById('marcoBar');
+    if (b) b.remove();
+    guardarMarco();
+    aplicarMarco();
+    toast(LANG === 'en' ? 'Screen saved' : 'Pantalla guardada', 1800);
+  }
+}
+
+function crearCaja() {
+  const caja = document.createElement('div');
+  caja.id = 'marcoCaja';
+  caja.innerHTML = '<span class="mh nw"></span><span class="mh ne"></span>' +
+                   '<span class="mh sw"></span><span class="mh se"></span>' +
+                   `<span class="mtxt">${TP.marcoDrag}</span>`;
+  document.body.appendChild(caja);
+
+  // un solo gestor con eventos de puntero: vale para dedo, ratón y lápiz
+  const alBajar = (e) => {
+    const esq = e.target.classList && e.target.classList.contains('mh')
+      ? ['nw', 'ne', 'sw', 'se'].find(x => e.target.classList.contains(x)) : null;
+    marcoDrag = { esq, x0: e.clientX, y0: e.clientY, base: { ...marco } };
+    try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault(); e.stopPropagation();
+  };
+  const alMoverP = (e) => {
+    if (!marcoDrag) return;
+    e.preventDefault(); e.stopPropagation();
+    const dx = (e.clientX - marcoDrag.x0) / innerWidth;
+    const dy = (e.clientY - marcoDrag.y0) / innerHeight;
+    const b = marcoDrag.base, min = .12;
+    if (!marcoDrag.esq) {
+      marco.x = Math.max(0, Math.min(1 - b.w, b.x + dx));
+      marco.y = Math.max(0, Math.min(1 - b.h, b.y + dy));
+    } else {
+      const oeste = marcoDrag.esq.includes('w'), norte = marcoDrag.esq.includes('n');
+      if (oeste) { const nx = Math.max(0, Math.min(b.x + dx, b.x + b.w - min)); marco.w = b.w + (b.x - nx); marco.x = nx; }
+      else       { marco.w = Math.max(min, Math.min(1 - b.x, b.w + dx)); }
+      if (norte) { const ny = Math.max(0, Math.min(b.y + dy, b.y + b.h - min)); marco.h = b.h + (b.y - ny); marco.y = ny; }
+      else       { marco.h = Math.max(min, Math.min(1 - b.y, b.h + dy)); }
+    }
+    aplicarMarco();
+  };
+  const alSubir = (e) => {
+    if (!marcoDrag) return;
+    marcoDrag = null;
+    guardarMarco();
+    try { e.target.releasePointerCapture(e.pointerId); } catch (err) {}
+  };
+  [caja, ...caja.querySelectorAll('.mh')].forEach(el => {
+    el.addEventListener('pointerdown', alBajar);
+    el.addEventListener('pointermove', alMoverP);
+    el.addEventListener('pointerup', alSubir);
+    el.addEventListener('pointercancel', alSubir);
+  });
+  return caja;
+}
+
+function barraMarco(v) {
+  let b = document.getElementById('marcoBar');
+  if (!b && v) {
+    b = document.createElement('div');
+    b.id = 'marcoBar';
+    b.innerHTML = `<span>${TP.marcoTit}</span>
+      <button id="marcoReset">RESET</button><button id="marcoOK">${TP.listo}</button>`;
+    document.body.appendChild(b);
+    b.querySelector('#marcoOK').onclick = () => editarMarco(false);
+    b.querySelector('#marcoReset').onclick = () => {
+      marco = null;
+      localStorage.removeItem(MARCOKEY());
+      fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clave: MARCOKEY(), pos: {} }) }).catch(() => {});
+      aplicarMarco();
+      editarMarco(false);
+    };
+  }
+  if (b) b.classList.toggle('on', !!v);
+}
+
+/* --- giro y suavizado, que siguen siendo útiles --- */
+let giro = parseInt(localStorage.getItem('sala_giro') || '0', 10);
+function girarImagen() {
+  giro = (giro + 90) % 360;
+  localStorage.setItem('sala_giro', giro);
+  aplicarGiro();
+  toast((LANG === 'en' ? 'Rotation: ' : 'Giro: ') + giro + '°', 1600);
+}
+function aplicarGiro() {
+  const c = lienzo();
+  if (!c) return;
+  if (giro) c.style.setProperty('transform', `rotate(${giro}deg)`, 'important');
+  else c.style.removeProperty('transform');
+}
+function alternarFiltro() {
+  const suave = localStorage.getItem('sala_suave') === '1' ? '0' : '1';
+  localStorage.setItem('sala_suave', suave);
+  aplicarFiltro(); marcarMenuPantalla();
+  toast(TP.mSuav + (suave === '1' ? TP.si : TP.no), 1600);
+}
+function aplicarFiltro() {
+  const c = lienzo();
+  if (!c) return;
+  const v = localStorage.getItem('sala_suave') === '1' ? 'auto' : 'pixelated';
+  if (c._filtro === v) return;               // sin cambios, sin tocar el estilo del canvas
+  c._filtro = v;
+  c.style.setProperty('image-rendering', v, 'important');
+}
+
+/* --- pantalla partida: cada uno ve SU mitad ampliada ---
+   El juego renderiza el frame entero (los dos visores) en los dos lados; aquí
+   solo ampliamos el lienzo y centramos la banda de tu visor. J1 (anfitrión)
+   arriba, J2 (invitado) abajo, como reparte Mario Kart. Reversible al toque. */
+let quieroMitad = false, mitadAplicada = false, marcoAntes = null;
+function aplicarMitad() {
+  const em = window.EJS_emulator;
+  const soyP1 = !!(em && em.netplay && em.netplay.owner);   // J1 arriba, J2 abajo
+  const W = innerWidth, H = innerHeight;
+  const ch = W * .75;                       // lienzo 4:3 a todo lo ancho
+  const banda = ch / 2;                     // tu visor: media pantalla del juego
+  const y = (H - banda) / 2 - (soyP1 ? 0 : banda);
+  const nuevo = { x: 0, w: 1, y: y / H, h: ch / H };
+  if (!mitadAplicada) marcoAntes = marco;   // guardamos tu ajuste para devolverlo
+  // se reaplica también si giraste el móvil (cambian las proporciones)
+  if (!mitadAplicada || !marco || Math.abs(marco.y - nuevo.y) > .001 ||
+      Math.abs(marco.h - nuevo.h) > .001) {
+    marco = nuevo;
+    aplicarMarco();
+  }
+  mitadAplicada = true;
+}
+function quitarMitad() {
+  if (!mitadAplicada) return;
+  mitadAplicada = false;
+  marco = marcoAntes; marcoAntes = null;
+  aplicarMarco();
+}
+/* la mitad solo se ve con la partida a dobles SINCRONIZADA; antes y después,
+   pantalla normal. Lo mantiene vigilarNetplay. */
+function mantenerMitad() {
+  const em = window.EJS_emulator;
+  if (quieroMitad && em && em.isNetplay && L.on) aplicarMitad();
+  else quitarMitad();
+}
+function soloMiMitad() {
+  quieroMitad = !quieroMitad;
+  const em = window.EJS_emulator;
+  if (!quieroMitad) toast(TP.mitadOff, 1800);
+  else toast((em && em.isNetplay && L.on) ? TP.mitadOn : TP.mitadArmada, 2600);
+  mantenerMitad();
+}
+
+/* --- botón monitor --- */
+function montarPantalla() {
+  if (document.getElementById('pantBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'pantBtn'; b.textContent = '🖥'; b.title = 'ajustes de pantalla';
+  document.body.appendChild(b);
+  const menu = document.createElement('div');
+  menu.id = 'pantMenu';
+  menu.innerHTML = `
+    <div class="pm-t">${TP.mPantalla}</div>
+    <button data-a="marco">${TP.mAjustar}<span>${TP.mAjustarSub}</span></button>
+    <button data-a="fs">${TP.mFull}</button>
+    <button data-a="reset">${TP.mNormal}</button>
+    <button data-a="giro">${TP.mGiro}</button>
+    <button data-a="filtro">${TP.mSuav}<b id="pmFiltro">—</b></button>
+    ${sys === 'n64' ? `<button data-a="mitad">${TP.mMitad}<span>${TP.mMitadSub}</span></button>` : ''}
+    <button data-a="despierto">${TP.mNoBloq}<b id="pmDesp">${TP.si}</b><span>${TP.mNoBloqSub}</span></button>
+    <button data-a="resync" id="pmResync">${TP.mResync}<span>${TP.mResyncSub}</span></button>
+
+    <div class="pm-t">${TP.mMando}</div>
+    <button data-a="stick">🕹 <b id="pmStick">${TP.cruceta}</b><span>${TP.mCrucetaSub}</span></button>
+    <button data-a="fuego">${TP.mHadouken}<b id="pmFuego">${TP.si}</b><span>${TP.mHadoukenSub}</span></button>
+
+    <div class="pm-t" id="pmTitPartida">${TP.mPartida}</div>
+    <button data-a="guardar">${TP.mGuardar}<span>${TP.mGuardarSub}</span></button>
+    <button data-a="auto">${TP.mAuto}<b id="pmAuto">${TP.si}</b><span>${TP.mAutoSub}</span></button>
+    <button data-a="cero">${TP.mCero}<span>${TP.mCeroSub}</span></button>
+
+    <div class="pm-t">${TP.mMal}</div>
+    <button data-a="sonido">${TP.mSonido}<span>${TP.mSonidoSub}</span></button>
+    <button data-a="fps">${TP.mFps}<b id="pmFps">${TP.no}</b><span>${TP.mFpsSub}</span></button>`;
+  document.body.appendChild(menu);
+  b.onclick = () => { menu.classList.toggle('on'); marcarMenuPantalla(); };
+  menu.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    menu.classList.remove('on');
+    if (btn.dataset.a === 'marco') editarMarco(true);
+    else if (btn.dataset.a === 'reset') { marco = null; localStorage.removeItem(MARCOKEY()); aplicarMarco();
+      toast(LANG === 'en' ? 'Screen reset' : 'Pantalla restablecida', 1600); }
+    else if (btn.dataset.a === 'fs') toggleFS();
+    else if (btn.dataset.a === 'giro') girarImagen();
+    else if (btn.dataset.a === 'filtro') alternarFiltro();
+    else if (btn.dataset.a === 'mitad') soloMiMitad();
+    else if (btn.dataset.a === 'resync') {
+      const em = window.EJS_emulator;
+      if (em && em.isNetplay && em.netplay) {
+        if (em.netplay.owner) { lkReset(); lkArrancar(em); }
+        else { L.tPedido = Date.now(); lkEnviar(em, { s2: 'resync' }); }
+        toast(TP.resyncPedida, 2200);
+      }
+    }
+    else if (btn.dataset.a === 'stick') { cambiarStick(); }
+    else if (btn.dataset.a === 'fps') { medidor(!document.getElementById('fpsBox')); }
+    else if (btn.dataset.a === 'guardar') { guardarPartida('mano'); }
+    else if (btn.dataset.a === 'auto') {
+      autoguardado = !autoguardado;
+      try { localStorage.setItem('sala_autosave', autoguardado ? '1' : '0'); } catch (e) {}
+      const b3 = document.getElementById('pmAuto');
+      if (b3) b3.textContent = autoguardado ? TP.si : TP.no;
+      toast(autoguardado ? TP.autoOn : TP.autoOff, 1800);
+    }
+    else if (btn.dataset.a === 'cero') { empezarDeCero(); }
+    else if (btn.dataset.a === 'despierto') {
+      quiereDespierto = !quiereDespierto;
+      try { localStorage.setItem('sala_despierto', quiereDespierto ? '1' : '0'); } catch (e) {}
+      const bd = document.getElementById('pmDesp');
+      if (bd) bd.textContent = quiereDespierto ? TP.si : TP.no;
+      if (quiereDespierto) { pedirDespierto(); } else { soltarDespierto(); }
+      setTimeout(() => toast(TP.pantEstado + estadoDespierto(), 2600), 400);
+    }
+    else if (btn.dataset.a === 'fuego') {
+      fuegoOn = !fuegoOn;
+      try { localStorage.setItem('sala_fuego', fuegoOn ? '1' : '0'); } catch (e) {}
+      const b2 = document.getElementById('pmFuego');
+      if (b2) b2.textContent = fuegoOn ? TP.si : TP.no;
+      if (fuegoOn) FUEGO.lanzar(innerWidth * .3, innerHeight * .6, 1);   // muestra
+      toast(fuegoOn ? TP.fuegoOn : TP.fuegoOff, 1600);
+    }
+    else if (btn.dataset.a === 'sonido') {
+      limpiarAjustesAudio(); forzarSonido(); restaurarSonido(true);
+      const hay = sesionAudio('playback') ? 'sesión iOS' : 'sin sesión iOS';
+      console.log('[sala200] rescate audio ·', hay, '· contextos:', contextos().length,
+                  '· vol:', (window.EJS_emulator || {}).volume, '· mute:', (window.EJS_emulator || {}).muted);
+      toast(LANG === 'en' ? 'Restoring sound…' : 'Recuperando el sonido…', 2000); }
+  });
+}
+function marcarMenuPantalla() {
+  const f = document.getElementById('pmFiltro');
+  if (f) f.textContent = localStorage.getItem('sala_suave') === '1' ? TP.si : TP.no;
+}
+montarPantalla();
+setInterval(() => {
+  if (marco) aplicarMarco();                 // sin marco no hay nada que mantener
+  if (giro) aplicarGiro();
+  aplicarFiltro();                           // este ya sale gratis si no cambió
+}, 1500);
+/* el emulador reajusta el lienzo por su cuenta: en cuanto lo toca, volvemos a poner el marco */
+let vigiaLienzo = null;
+setInterval(() => {
+  const c = lienzo();
+  if (!c || c._vigilado) return;
+  c._vigilado = true;
+  vigiaLienzo = new MutationObserver(() => { if (marco) aplicarMarco(); });
+  vigiaLienzo.observe(c, { attributes: true, attributeFilter: ['style', 'width', 'height'] });
+}, 1200);
+addEventListener('resize', () => setTimeout(aplicarMarco, 250));
+addEventListener('orientationchange', () => setTimeout(() => {
+  try { marco = JSON.parse(localStorage.getItem(MARCOKEY()) || 'null'); } catch (e) { marco = null; }
+  aplicarMarco();
+}, 450));
+
+/* ================= PARTIDA GUARDADA SOLA =================
+   Cada poco guardamos una foto completa del juego en tu perfil (no en este móvil),
+   así puedes seguir donde lo dejaste aunque cambies de aparato. Como es una foto
+   del sistema entero, se lleva también los ajustes de dentro del juego: los mandos
+   redefinidos del Street Fighter, opciones, dificultad... todo. */
+/* ojo: EJS_gameID se calcula más abajo en el fichero, así que la clave se pide
+   cuando hace falta, no al cargar (si no, todos los juegos compartirían partida) */
+const CLAVE_PARTIDA = () => `${sys}_${window.EJS_gameID || 0}`;
+let autoguardado = true;
+try { autoguardado = localStorage.getItem('sala_autosave') !== '0'; } catch (e) {}
+let ultimoGuardado = 0, guardando = false, reanudada = false;
+
+function puedeGuardar() {
+  const em = window.EJS_emulator;
+  if (!em || !em.started || !em.gameManager) return false;
+  if (em.isNetplay && !(em.netplay && em.netplay.owner)) return false;   // el invitado no manda
+  return true;
+}
+
+async function guardarPartida(motivo) {
+  if (!autoguardado || guardando || !puedeGuardar()) return false;
+  /* En partida en red NO se autoguarda: getState() son varios MB síncronos y el
+     tirón pausaba el lockstep del rival (y a veces forzaba un resync con savestate).
+     Guardar a mano o al salir sí se puede. */
+  if ((motivo === 'auto' || motivo === 'fondo') &&
+      window.EJS_emulator.isNetplay) return false;
+  guardando = true;
+  try {
+    const bytes = window.EJS_emulator.gameManager.getState();
+    if (!bytes || !bytes.length) { guardando = false; return false; }
+    const r = await fetch('/api/estado?j=' + encodeURIComponent(CLAVE_PARTIDA()), {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes });
+    ultimoGuardado = Date.now();
+    guardando = false;
+    if (motivo === 'mano') toast(LANG === 'en' ? 'Game saved' : 'Partida guardada', 1600);
+    return r.ok;
+  } catch (e) { guardando = false; return false; }
+}
+
+async function reanudarPartida() {
+  if (!autoguardado || reanudada || !puedeGuardar()) return;
+  if (window.EJS_emulator.isNetplay) return;          // en red manda el anfitrión
+  reanudada = true;
+  try {
+    const info = await (await fetch('/api/estado?j=' + encodeURIComponent(CLAVE_PARTIDA()) + '&info=1')).json();
+    if (!info.hay) return;
+    const buf = await (await fetch('/api/estado?j=' + encodeURIComponent(CLAVE_PARTIDA()))).arrayBuffer();
+    if (!buf || !buf.byteLength) return;
+    window.EJS_emulator.gameManager.loadState(new Uint8Array(buf));
+    const hace = Math.round((Date.now() - info.cuando) / 60000);
+    toast((LANG === 'en' ? '▶ Resumed where you left it' : '▶ Sigues donde lo dejaste') +
+          (hace > 0 && hace < 100000 ? ` · hace ${hace < 60 ? hace + ' min' : Math.round(hace / 60) + ' h'}` : ''), 3200);
+  } catch (e) {}
+}
+
+function empezarDeCero() {
+  fetch('/api/estado?j=' + encodeURIComponent(CLAVE_PARTIDA()) + '&borrar=1', { method: 'POST' })
+    .then(() => { toast(LANG === 'en' ? 'Progress cleared, restarting' : 'Partida borrada, empezamos de cero', 2200);
+                  setTimeout(() => location.reload(), 900); })
+    .catch(() => {});
+}
+
+/* al arrancar: reanudar. Luego, guardar cada 45 s y al salir o irte a otra app. */
+setTimeout(reanudarPartida, 2500);
+setInterval(() => { if (Date.now() - ultimoGuardado > 44000) guardarPartida('auto'); }, 15000);
+addEventListener('visibilitychange', () => { if (document.hidden) guardarPartida('fondo'); });
+addEventListener('pagehide', () => { guardarPartida('salida'); });
+
+/* y los guardados propios del juego (la pila del cartucho) cada poco, no cada 5 minutos */
+setTimeout(() => {
+  try {
+    const em = window.EJS_emulator;
+    if (em && typeof em.changeSettingOption === 'function') em.changeSettingOption('save-save-interval', '30');
+  } catch (e) {}
+}, 6000);
+
+/* pedimos almacenamiento permanente: si no, el navegador puede tirar el juego
+   guardado en cuanto le apriete el espacio, y volverías a descargarlo entero */
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+/* ================= QUE NO SE APAGUE LA PANTALLA =================
+   Mientras juegas no se toca la pantalla durante minutos, así que el móvil se
+   bloquea solo en mitad de una partida. Con el bloqueo de pantalla del navegador
+   lo evitamos. Ojo: se suelta al irte a otra app, hay que volver a pedirlo. */
+let despierto = null, quiereDespierto = true;
+try { quiereDespierto = localStorage.getItem('sala_despierto') !== '0'; } catch (e) {}
+
+async function pedirDespierto() {
+  if (!quiereDespierto || despierto) return;
+  if (!('wakeLock' in navigator)) {
+    if (!window.__avisoDespierto) {
+      window.__avisoDespierto = true;
+      console.warn('[sala200] este navegador no sabe mantener la pantalla encendida');
+    }
+    return;
+  }
+  try {
+    despierto = await navigator.wakeLock.request('screen');
+    despierto.addEventListener('release', () => { despierto = null; });
+  } catch (e) {
+    console.warn('[sala200] no me dejan mantener la pantalla encendida:', e && e.name);
+  }
+}
+async function soltarDespierto() {
+  try { if (despierto) await despierto.release(); } catch (e) {}
+  despierto = null;
+}
+function estadoDespierto() {
+  if (!('wakeLock' in navigator)) return TP.despNo;
+  return despierto ? TP.despEnc : (quiereDespierto ? TP.despPid : TP.despOff);
+}
+/* Lo pedimos cuanto antes (las esperas largas de PS1 son justo cuando molesta),
+   y lo reintentamos cada 15 s: el navegador lo suelta solo en cuanto llega una
+   notificación o cambias de app, y si no insistes te quedas sin él. */
+pedirDespierto();
+setTimeout(pedirDespierto, 800);
+setInterval(() => { if (quiereDespierto && !despierto && !document.hidden) pedirDespierto(); }, 15000);
+addEventListener('visibilitychange', () => { if (!document.hidden) pedirDespierto(); else soltarDespierto(); });
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (!despierto) pedirDespierto(); }, { passive: true }));
+addEventListener('pagehide', soltarDespierto);
+
+/* ================= MEDIDOR DE RENDIMIENTO =================
+   Para poder diagnosticar tirones sin adivinar: fotogramas por segundo,
+   el mínimo de los últimos segundos y la memoria que gasta la página. */
+let fpsRAF = null;
+function medidor(encender) {
+  const b = document.getElementById('pmFps');
+  const viejo = document.getElementById('fpsBox');
+  if (viejo) { viejo.remove(); cancelAnimationFrame(fpsRAF); fpsRAF = null; }
+  if (b) b.textContent = encender ? TP.si : TP.no;
+  try { localStorage.setItem('sala_fps', encender ? '1' : '0'); } catch (e) {}
+  if (!encender) return;
+
+  const caja = document.createElement('div');
+  caja.id = 'fpsBox';
+  caja.style.cssText = 'position:fixed;z-index:10007;right:max(8px,env(safe-area-inset-right));' +
+    'top:max(52px,env(safe-area-inset-top));background:rgba(3,10,6,.72);color:#39ff88;' +
+    'font:600 11px ui-monospace,Menlo,monospace;padding:6px 9px;border:1px solid #1a3324;' +
+    'pointer-events:none;line-height:1.5;text-align:right;white-space:pre';
+  document.body.appendChild(caja);
+
+  let cuenta = 0, t0 = performance.now(), minimo = 999, seg = 0;
+  const paso = (t) => {
+    cuenta++;
+    if (t - t0 >= 1000) {
+      const fps = cuenta * 1000 / (t - t0);
+      seg++;
+      if (seg > 2) minimo = Math.min(minimo, fps);         // los 2 primeros no cuentan (arranque)
+      const mem = performance.memory
+        ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : '';
+      let red = '';
+      try { if (L && L.on) red = '\nred ' + L.d + 'f (' + Math.round(L.d * 16.7) + 'ms)' +
+        (L.rtt ? ' · rtt ' + L.rtt + 'ms' : ''); } catch (e) {}
+      caja.textContent = fps.toFixed(0) + ' fps\nmin ' + (minimo < 999 ? minimo.toFixed(0) : '-') +
+                         (mem ? '\n' + mem : '') + red + '\n' + seg + ' s';
+      cuenta = 0; t0 = t;
+    }
+    fpsRAF = requestAnimationFrame(paso);
+  };
+  fpsRAF = requestAnimationFrame(paso);
+}
+try { if (localStorage.getItem('sala_fps') === '1') setTimeout(() => medidor(true), 1500); } catch (e) {}
+
+/* ================= VOLVER AL MENÚ =================
+   En pantalla completa no hay barra del navegador, así que sin esto te quedas
+   atrapado en la partida. Discreto en una esquina y con confirmación,
+   para no salirse sin querer en mitad de un jefe final. */
+function montarVolver() {
+  if (document.getElementById('volverBtn')) return;
+  const b = document.createElement('button');
+  b.id = 'volverBtn';
+  b.textContent = '←';
+  b.title = TP.tVolver;
+  b.setAttribute('aria-label', 'volver al menú');
+  document.body.appendChild(b);
+  let armado = null;
+  b.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (modoColocar) return;
+    if (armado) {                                  // segundo toque: nos vamos
+      clearTimeout(armado);
+      try { guardarYa(); } catch (err) {}
+      b.textContent = '…';
+      // guardamos la partida antes de salir, que para eso está
+      Promise.race([guardarPartida('salida'), new Promise(r => setTimeout(r, 2500))])
+        .then(() => { location.href = 'index.html'; });
+      return;
+    }
+    b.classList.add('listo');
+    b.textContent = '✓';
+    vibrar(15);
+    toast(LANG === 'en' ? 'Tap again to leave the game' : 'Toca otra vez para salir de la partida', 2400);
+    armado = setTimeout(() => { armado = null; b.classList.remove('listo'); b.textContent = '←'; }, 2600);
+  });
+  b.classList.add('on');
+}
+montarVolver();
+
+/* ================= JOYSTICK EN LUGAR DE CRUCETA =================
+   La cruceta de plástico está bien para saltar, pero para moverse en diagonal
+   un stick va mucho mejor. Se guarda por sistema y por perfil. */
+const STICKKEY = () => `sala_stick_${sys}`;
+/* En N64, Neo Geo y arcade se juega con palanca, así que la bola viene de fábrica.
+   En consolas de cruceta (SNES, Mega Drive) manda la cruz salvo que digas otra cosa. */
+/* tres modos: 'bola' (la roja de recreativa), 'ligero' (aro plano, rinde más
+   en móviles justitos) y 'cruz'. Guardado por sistema: 1=bola 2=ligero 0=cruz. */
+let stickModo = (sys === 'n64' || sys === 'neogeo' || sys === 'arcade' || sys === 'psx') ? 'bola' : 'cruz';
+try {
+  const g = localStorage.getItem(STICKKEY());
+  if (g === '1') stickModo = 'bola';
+  else if (g === '2') stickModo = 'ligero';
+  else if (g === '0') stickModo = 'cruz';
+} catch (e) {}
+let joystick = stickModo !== 'cruz';
+const ES_ANALOGICO = (sys === 'n64' || sys === 'psx');   // stick de verdad, no cruceta
+const ES_PSX = (sys === 'psx');
+const ES_N64 = ES_ANALOGICO;
+const DIRS = { arriba: 4, abajo: 5, izq: 6, der: 7 };      // cruceta digital (SNES, Mega Drive...)
+const EJES = { arriba: 19, abajo: 18, izq: 17, der: 16 };  // stick analógico del N64
+let dirPulsadas = { arriba: 0, abajo: 0, izq: 0, der: 0 };
+let ejeValor = { 16: 0, 17: 0, 18: 0, 19: 0 };
+
+/* En N64 no vale con "pulsado o no": hay que mandar cuánto inclinas el stick,
+   que es lo que diferencia andar de puntillas de salir corriendo. */
+function mandarEje(idx, valor) {
+  valor = Math.max(0, Math.min(32767, Math.round(valor)));
+  if (ejeValor[idx] === valor) return;
+  ejeValor[idx] = valor;
+  try {
+    const em = window.EJS_emulator;
+    if (em && em.gameManager) em.gameManager.simulateInput(0, idx, valor);
+  } catch (e) {}
+}
+function mandarAnalogico(ux, uy, fuerza) {
+  const f = Math.max(0, Math.min(1, fuerza)) * 32767;
+  mandarEje(EJES.der,    ux > 0 ? f * Math.abs(ux) : 0);
+  mandarEje(EJES.izq,    ux < 0 ? f * Math.abs(ux) : 0);
+  mandarEje(EJES.abajo,  uy > 0 ? f * Math.abs(uy) : 0);
+  mandarEje(EJES.arriba, uy < 0 ? f * Math.abs(uy) : 0);
+}
+
+function mandarDir(dir, valor) {
+  if (dirPulsadas[dir] === valor) return;
+  dirPulsadas[dir] = valor;
+  try {
+    const em = window.EJS_emulator;
+    if (em && em.gameManager) em.gameManager.simulateInput(0, DIRS[dir], valor);
+  } catch (e) {}
+}
+function soltarTodo() {
+  Object.keys(DIRS).forEach(d => mandarDir(d, 0));
+  if (ES_N64) Object.values(EJES).forEach(i => mandarEje(i, 0));
+}
+
+/* Bola roja de salón recreativo, con sus años encima: brillo especular arriba,
+   arañazos de mil partidas, desconchones donde se ha ido la pintura y roña en el ecuador. */
+function texturaBola() {
+  const T = 256, c = document.createElement('canvas');
+  c.width = c.height = T;
+  const g = c.getContext('2d');
+  const R = T / 2;
+  const az = (a, b) => a + Math.random() * (b - a);
+
+  g.save();
+  g.beginPath(); g.arc(R, R, R - 2, 0, 7); g.clip();      // todo dentro de la esfera
+
+  // cuerpo: rojo de bola clásica, con el volumen hecho con el degradado
+  const base = g.createRadialGradient(R * .68, R * .58, R * .06, R, R, R);
+  base.addColorStop(0,   '#ff8b7a');
+  base.addColorStop(.18, '#e63b2e');
+  base.addColorStop(.55, '#b4231b');
+  base.addColorStop(.82, '#6d120f');
+  base.addColorStop(1,   '#2b0705');
+  g.fillStyle = base; g.fillRect(0, 0, T, T);
+
+  // roña acumulada en la parte baja
+  const roña = g.createRadialGradient(R, R * 1.45, R * .1, R, R * 1.2, R);
+  roña.addColorStop(0, 'rgba(40,26,20,.5)');
+  roña.addColorStop(1, 'rgba(40,26,20,0)');
+  g.fillStyle = roña; g.fillRect(0, 0, T, T);
+
+  // grano del plástico
+  for (let i = 0; i < 2600; i++) {
+    g.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '0,0,0'},${az(.02, .07)})`;
+    g.fillRect(az(0, T), az(0, T), 1, 1);
+  }
+
+  // arañazos: finos, curvos y sobre todo por donde roza la mano
+  for (let i = 0; i < 34; i++) {
+    const a = az(0, 6.28), d = az(R * .25, R * .95);
+    const x = R + Math.cos(a) * d, y = R + Math.sin(a) * d;
+    const largo = az(6, 34), ang = az(0, 6.28);
+    g.strokeStyle = `rgba(255,235,225,${az(.05, .22)})`;
+    g.lineWidth = az(.5, 1.4);
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + Math.cos(ang) * largo * .5 + az(-4, 4),
+                       y + Math.sin(ang) * largo * .5 + az(-4, 4),
+                       x + Math.cos(ang) * largo, y + Math.sin(ang) * largo);
+    g.stroke();
+  }
+
+  // desconchones: se ve el plástico gris de debajo
+  for (let i = 0; i < 9; i++) {
+    const a = az(0, 6.28), d = az(R * .3, R * .88);
+    const x = R + Math.cos(a) * d, y = R + Math.sin(a) * d, r = az(2.5, 7);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(214,206,198,${az(.5, .8)})`);
+    gr.addColorStop(.6, `rgba(150,140,134,${az(.2, .4)})`);
+    gr.addColorStop(1, 'rgba(120,110,104,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.ellipse(x, y, r, r * az(.5, .9), az(0, 3), 0, 7); g.fill();
+  }
+
+  // marcas de golpes más oscuras
+  for (let i = 0; i < 6; i++) {
+    const a = az(0, 6.28), d = az(R * .4, R * .9);
+    const x = R + Math.cos(a) * d, y = R + Math.sin(a) * d, r = az(3, 9);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, `rgba(30,10,8,${az(.25, .5)})`);
+    gr.addColorStop(1, 'rgba(30,10,8,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+
+  // brillo especular principal, ya apagado por el uso
+  const esp = g.createRadialGradient(R * .62, R * .5, 0, R * .62, R * .5, R * .42);
+  esp.addColorStop(0, 'rgba(255,255,255,.78)');
+  esp.addColorStop(.35, 'rgba(255,225,215,.24)');
+  esp.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = esp;
+  g.beginPath(); g.ellipse(R * .68, R * .55, R * .38, R * .3, -.5, 0, 7); g.fill();
+
+  // luz de rebote por abajo, que redondea la esfera
+  const reb = g.createRadialGradient(R * 1.2, R * 1.5, 0, R * 1.2, R * 1.5, R * .8);
+  reb.addColorStop(0, 'rgba(255,150,120,.22)');
+  reb.addColorStop(1, 'rgba(255,150,120,0)');
+  g.fillStyle = reb; g.fillRect(0, 0, T, T);
+
+  // borde oscuro para que no parezca un círculo plano
+  const borde = g.createRadialGradient(R, R, R * .72, R, R, R);
+  borde.addColorStop(0, 'rgba(0,0,0,0)');
+  borde.addColorStop(1, 'rgba(0,0,0,.65)');
+  g.fillStyle = borde; g.fillRect(0, 0, T, T);
+  g.restore();
+
+  return c.toDataURL('image/png');
+}
+
+let _bolaURL = null;
+function bolaURL() {   // la textura se dibuja UNA vez por sesión, no en cada cambio
+  if (_bolaURL === null) { try { _bolaURL = texturaBola(); } catch (e) { _bolaURL = ''; } }
+  return _bolaURL;
+}
+function montarStick() {
+  if (document.getElementById('stick')) return;
+  const st = document.createElement('div');
+  st.id = 'stick';
+  st.innerHTML = '<div id="stickBase"></div><div id="stickKnob"></div>';
+  document.body.appendChild(st);
+  const knob = st.querySelector('#stickKnob');
+  let centro = null, radio = 60;
+
+  st.addEventListener('pointerdown', e => {
+    if (modoColocar) return;                       // en modo colocar se arrastra, no se juega
+    const r = st.getBoundingClientRect();
+    centro = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    radio = r.width * .42;
+    st.classList.add('agarrado');
+    st.setPointerCapture(e.pointerId);
+    mover(e);
+    e.preventDefault();
+  });
+  let tMov = 0;
+  st.addEventListener('pointermove', e => {
+    if (!centro) return;
+    e.preventDefault();
+    const t = performance.now();     // Android dispara 120-240 eventos/s; el juego pinta 60
+    if (t - tMov < 12) return;
+    tMov = t;
+    mover(e);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev =>
+    st.addEventListener(ev, () => {
+      centro = null;
+      st.classList.remove('agarrado');
+      knob.style.transform = '';
+      soltarTodo();
+    }));
+
+  function mover(e) {
+    let dx = e.clientX - centro.x, dy = e.clientY - centro.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const lim = Math.min(d, radio);
+    const ux = dx / d, uy = dy / d;
+    knob.style.transform = `translate(${ux * lim}px, ${uy * lim}px)`;
+    // zona muerta para no disparar direcciones sin querer
+    const fuerza = d / radio;
+    if (fuerza < .18) { soltarTodo(); return; }
+    if (ES_ANALOGICO) {                 // analógico: cuanto más lejos del centro, más rápido
+      mandarAnalogico(ux, uy, (fuerza - .12) / .88);
+      /* En PS1 muchísimos juegos son SOLO digitales (el Resident Evil 1, por ejemplo,
+         ni conoce el stick). Así que la bola manda además la cruceta: funciona en todos. */
+      if (ES_PSX) {
+        const U = .34;
+        mandarDir('izq',    ux < -U ? 1 : 0);
+        mandarDir('der',    ux >  U ? 1 : 0);
+        mandarDir('arriba', uy < -U ? 1 : 0);
+        mandarDir('abajo',  uy >  U ? 1 : 0);
+      }
+      return;
+    }
+    const UMBRAL = .38;
+    if (fuerza < .3) { soltarTodo(); return; }
+    mandarDir('izq',    ux < -UMBRAL ? 1 : 0);
+    mandarDir('der',    ux >  UMBRAL ? 1 : 0);
+    mandarDir('arriba', uy < -UMBRAL ? 1 : 0);
+    mandarDir('abajo',  uy >  UMBRAL ? 1 : 0);
+  }
+}
+
+function colocarStick() {
+  const st = document.getElementById('stick');
+  if (!st) return;
+  let pos = null;
+  try {
+    if (posiciones['f_stick']) return;             // ya lo has colocado tú: no lo toques
+    pos = posiciones['dpad'] || null;              // si moviste la cruceta, hereda su sitio
+  } catch (e) { pos = null; }
+  if (!pos) return;                                // sin datos, manda el sitio por defecto del CSS
+  const lado = st.offsetWidth || 170;
+  const x = Math.max(4, Math.min(innerWidth - lado - 4, pos.x * innerWidth));
+  const y = Math.max(4, Math.min(innerHeight - lado - 4, pos.y * innerHeight));
+  st.style.left = Math.round(x) + 'px';
+  st.style.top = Math.round(y) + 'px';
+  st.style.bottom = 'auto';
+}
+
+function aplicarStick() {
+  montarStick();
+  joystick = stickModo !== 'cruz';
+  document.documentElement.classList.toggle('stick-on', joystick);
+  const st = document.getElementById('stick');
+  if (st) {
+    st.classList.toggle('ligero', stickModo === 'ligero');
+    const knob = document.getElementById('stickKnob');
+    if (knob) knob.style.backgroundImage = stickModo === 'bola' ? `url(${bolaURL()})` : 'none';
+  }
+  const eti = document.getElementById('pmStick');
+  if (eti) eti.textContent = stickModo === 'bola' ? TP.bola
+                           : stickModo === 'ligero' ? TP.ligero : TP.cruceta;
+  const ef = document.getElementById('pmFuego');
+  if (ef) ef.textContent = fuegoOn ? TP.si : TP.no;
+  const ea = document.getElementById('pmAuto');
+  if (ea) ea.textContent = autoguardado ? TP.si : TP.no;
+  const ed = document.getElementById('pmDesp');
+  if (ed) ed.textContent = quiereDespierto ? (despierto ? TP.si + ' ✓' : TP.si) : TP.no;
+  if (joystick) colocarStick(); else soltarTodo();
+}
+function cambiarStick() {
+  stickModo = stickModo === 'bola' ? 'ligero' : stickModo === 'ligero' ? 'cruz' : 'bola';
+  const cod = stickModo === 'bola' ? '1' : stickModo === 'ligero' ? '2' : '0';
+  try { localStorage.setItem(STICKKEY(), cod); } catch (e) {}
+  fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clave: STICKKEY(), pos: { on: +cod } }) }).catch(() => {});
+  aplicarStick();
+  if (joystick) colocarStick();
+  vibrar(20);
+  toast(stickModo === 'bola' ? TP.tsBola : stickModo === 'ligero' ? TP.tsLigero : TP.tsCruz, 1800);
+}
+setTimeout(aplicarStick, 900);
+
+
+/* ================= HADOUKEN: FUEGO DE VERDAD =================
+   Detectamos el cuarto de círculo (abajo, abajo-delante, delante) seguido de puñetazo,
+   venga del joystick o de la cruceta, y soltamos una bola de fuego con partículas.
+   Todo en un lienzo aparte con mezcla aditiva: núcleo blanco, llamas, chispas y humo. */
+const FUEGO = (() => {
+  let cv, ctx, dpr = 1, corriendo = false;
+  const parts = [];
+  const ondas = [];
+  let sprites = null;
+
+  /* Piezas del joystick saltando por los aires: un muelle y una tuerca dibujados
+     a mano, que al nivel bestia se ve que el mando se está desarmando. */
+  function pieza(cual) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 48;
+    const g = c.getContext('2d');
+    g.lineCap = 'round';
+    if (cual === 'muelle') {
+      for (const [col, ancho, dx] of [['rgba(20,20,26,.9)', 5, 1], ['#b9c2d4', 3, 0], ['#f2f6ff', 1.2, -.6]]) {
+        g.strokeStyle = col; g.lineWidth = ancho;
+        g.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const t = i / 40, y = 6 + t * 36;
+          const x = 24 + Math.sin(t * Math.PI * 5) * 9 + dx;
+          i ? g.lineTo(x, y) : g.moveTo(x, y);
+        }
+        g.stroke();
+      }
+    } else {
+      g.translate(24, 24);
+      g.strokeStyle = 'rgba(15,15,20,.9)'; g.lineWidth = 5;
+      g.fillStyle = '#98a3b8';
+      g.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3, x = Math.cos(a) * 13, y = Math.sin(a) * 13;
+        i ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.closePath(); g.stroke(); g.fill();
+      g.strokeStyle = '#e6ecf7'; g.lineWidth = 1.4; g.stroke();
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath(); g.arc(0, 0, 5.5, 0, 7); g.fill();
+    }
+    return c;
+  }
+
+  function hacerSprites() {
+    // pre-dibujamos las manchas: pintar degradados por partícula y fotograma iría a pedales
+    const mk = (paradas) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 96;
+      const g = c.getContext('2d');
+      const gr = g.createRadialGradient(48, 48, 0, 48, 48, 48);
+      paradas.forEach(([p, col]) => gr.addColorStop(p, col));
+      g.fillStyle = gr; g.beginPath(); g.arc(48, 48, 48, 0, 7); g.fill();
+      return c;
+    };
+    return {
+      nucleo: mk([[0, 'rgba(255,255,255,1)'], [.28, 'rgba(255,245,200,.95)'],
+                  [.6, 'rgba(255,150,40,.5)'], [1, 'rgba(255,80,0,0)']]),
+      llama:  mk([[0, 'rgba(255,230,150,.95)'], [.35, 'rgba(255,140,30,.75)'],
+                  [.7, 'rgba(220,40,10,.35)'], [1, 'rgba(120,10,0,0)']]),
+      brasa:  mk([[0, 'rgba(255,220,120,1)'], [.5, 'rgba(255,110,20,.6)'], [1, 'rgba(255,60,0,0)']]),
+      humo:   mk([[0, 'rgba(70,60,58,.55)'], [.6, 'rgba(40,34,34,.3)'], [1, 'rgba(20,16,16,0)']]),
+      // versión azul, para cuando encadenas dos bolas
+      nucleoAzul: mk([[0, 'rgba(255,255,255,1)'], [.28, 'rgba(205,240,255,.95)'],
+                      [.6, 'rgba(70,160,255,.5)'], [1, 'rgba(20,60,255,0)']]),
+      llamaAzul:  mk([[0, 'rgba(200,240,255,.95)'], [.35, 'rgba(80,170,255,.75)'],
+                      [.7, 'rgba(30,70,220,.35)'], [1, 'rgba(10,20,110,0)']]),
+      brasaAzul:  mk([[0, 'rgba(220,245,255,1)'], [.5, 'rgba(90,180,255,.6)'], [1, 'rgba(40,90,255,0)']]),
+      // chispa blanca de soldadura, la que hace el ¡crack!
+      chispa: mk([[0, 'rgba(255,255,255,1)'], [.25, 'rgba(255,245,220,.9)'],
+                  [.6, 'rgba(255,200,120,.35)'], [1, 'rgba(255,160,60,0)']]),
+      muelle: pieza('muelle'),
+      tuerca: pieza('tuerca')
+    };
+  }
+
+  function preparar() {
+    if (cv) return;
+    cv = document.createElement('canvas');
+    cv.id = 'fuegoCv';
+    cv.style.cssText = 'position:fixed;inset:0;z-index:10003;pointer-events:none;display:none;opacity:.62';
+    document.body.appendChild(cv);
+    ctx = cv.getContext('2d');
+    sprites = hacerSprites();
+    medir();
+    addEventListener('resize', medir);
+  }
+  /* El lienzo del fuego ocupa toda la pantalla. Aunque esté transparente, el móvil
+     tiene que componerlo en cada fotograma, así que lo escondemos cuando no hay nada. */
+  function encender() { if (cv && cv.style.display === 'none') cv.style.display = 'block'; }
+  function apagar()   { if (cv) cv.style.display = 'none'; }
+
+  function medir() {
+    if (!cv) return;
+    dpr = Math.min(1.5, devicePixelRatio || 1);      // de sobra para llamas, y la mitad de píxeles
+    cv.width = Math.round(innerWidth * dpr);
+    cv.height = Math.round(innerHeight * dpr);
+    cv.style.width = innerWidth + 'px';
+    cv.style.height = innerHeight + 'px';
+  }
+
+  const az = (a, b) => a + Math.random() * (b - a);
+
+  function lanzar(x, y, dir, tipo, azul, nivel) {
+    preparar(); encender();
+    nivel = nivel || 1;
+    const K = Math.max(.85, Math.min(innerWidth, innerHeight) / 390) * (1 + Math.min(nivel, 10) * .06);
+    const N = azul ? 'nucleoAzul' : 'nucleo';
+    /* En vez de todo azul, mezclamos: azul donde más quema y naranja alrededor */
+    const dos = () => (azul && Math.random() < .55) ? { L: 'llamaAzul', B: 'brasaAzul' }
+                                                    : { L: 'llama', B: 'brasa' };
+    const L = azul ? 'llamaAzul' : 'llama', B = azul ? 'brasaAzul' : 'brasa';
+    if (tipo === 'ascenso') return ascenso(x, y, dir, K, azul, nivel);
+    const extra = Math.min(nivel, 10);
+    // 1) el núcleo: bola brillante que viaja dejando estela (va soltando llama en cada fotograma)
+    parts.push({ t: N, x, y, vx: dir * (azul ? 640 : 520) * K, vy: az(-20, 8),
+                 vida: azul ? .62 : .5, max: .62, r: (azul ? 104 : 82) * K,
+                 giro: 0, estela: true, dir, azul: !!azul });
+    // 2) fogonazo de salida: llamarada ancha desde la mano
+    for (let i = 0; i < 24 + extra * 6; i++) {
+      const ang = az(-.5, .5);
+      const v = az(150, 430) * K;
+      parts.push({ t: dos().L, x: x + az(-7, 7), y: y + az(-7, 7),
+                   vx: dir * Math.cos(ang) * v, vy: Math.sin(ang) * v * .45 - az(0, 50),
+                   vida: az(.28, .6), max: .6, r: az(34, 78) * K * (azul ? 1.2 : 1), giro: az(-3, 3) });
+    }
+    // 3) chispas rápidas con gravedad
+    for (let i = 0; i < 16 + extra * 5; i++) {
+      const ang = az(-.7, .7);
+      const v = az(400, 1000) * K;
+      parts.push({ t: dos().B, x, y, vx: dir * Math.cos(ang) * v, vy: Math.sin(ang) * v * .6 - az(60, 200),
+                   vida: az(.35, .7), max: .7, r: az(4, 10) * K, g: 900, giro: 0 });
+      if (extra >= 4 && i % 3 === 0) {                 // y chispa blanca de propina
+        parts.push({ t: 'chispa', x, y, vx: dir * Math.cos(ang) * v * 1.4, vy: Math.sin(ang) * v - az(100, 400),
+                     vida: az(.2, .5), max: .5, r: az(3, 8), g: 1200, giro: 0 });
+      }
+    }
+    // 4) un pelín de humo, solo para dar cuerpo (antes tapaba media pantalla)
+    for (let i = 0; i < 4; i++) {
+      parts.push({ t: 'humo', x: x + az(-10, 10), y: y + az(-10, 10),
+                   vx: dir * az(20, 90) * K, vy: -az(30, 90),
+                   vida: az(.5, .9), max: .9, r: az(40, 80) * K, giro: az(-1, 1) });
+    }
+    // 5) onda expansiva y destello de salida
+    ondas.push({ x, y, r: 8 * K, vida: .3, max: .3, k: K * .7, azul });
+    if (azul) ondas.push({ x, y, r: 8 * K, vida: .5, max: .5, k: K * 1.15, azul: true });
+    destello = { x, y, vida: azul ? .2 : .14, max: azul ? .2 : .14, r: (azul ? 230 : 150) * K, azul };
+    if (parts.length > 420) parts.splice(0, parts.length - 420);
+    if (!corriendo) { corriendo = true; ultimo = performance.now(); requestAnimationFrame(pintar); }
+  }
+
+  /* SHORYUKEN: puño hacia arriba. Columna de fuego que sube con un poco de
+     deriva hacia delante, en vez de una bola que sale disparada de lado. */
+  function ascenso(x, y, dir, K, azul, nivel) {
+    const N = azul ? 'nucleoAzul' : 'nucleo', L = azul ? 'llamaAzul' : 'llama', B = azul ? 'brasaAzul' : 'brasa';
+    const extra = Math.min(nivel || 1, 10);
+    parts.push({ t: N, x, y: y + 10, vx: dir * 130 * K, vy: -560 * K * (1 + extra * .07),
+                 vida: .52, max: .52, r: 78 * K, giro: 0, estela: true, dir, sube: true, azul: !!azul });
+    for (let i = 0; i < 26 + extra * 7; i++) {
+      const ang = az(-.45, .45);
+      const v = az(180, 520) * K;
+      parts.push({ t: L, x: x + az(-9, 9), y: y + az(-4, 10),
+                   vx: dir * az(20, 130) * K + Math.sin(ang) * 60,
+                   vy: -v * (1 + extra * .06), vida: az(.3, .62 + extra * .04), max: 1,
+                   r: az(32, 74) * K, giro: 0, sube: true });
+    }
+    for (let i = 0; i < 18 + extra * 4; i++) {
+      parts.push({ t: B, x: x + az(-12, 12), y: y + az(-6, 8),
+                   vx: dir * az(30, 260) * K + az(-90, 90), vy: -az(500, 1150) * K,
+                   vida: az(.4, .8), max: .8, r: az(4, 11) * K, g: 780, giro: 0 });
+    }
+    for (let i = 0; i < 4; i++) {
+      parts.push({ t: 'humo', x: x + az(-10, 10), y: y + az(-6, 6),
+                   vx: dir * az(10, 70) * K, vy: -az(60, 130),
+                   vida: az(.5, .9), max: .9, r: az(38, 76) * K, giro: 0 });
+    }
+    ondas.push({ x, y, r: 8 * K, vida: .3, max: .3, k: K * .6 });
+    destello = { x, y, vida: .14, max: .14, r: 140 * K };
+    if (!corriendo) { corriendo = true; ultimo = performance.now(); requestAnimationFrame(pintar); }
+  }
+
+  /* La bola se queda ardiendo unos segundos y la llama sigue al pulgar:
+     emitimos desde la posición real de la bola en cada fotograma y usamos
+     su velocidad para que el fuego quede rezagado, como una estela. */
+  let arde = 0, ardeAzul = false, ardeNivel = 1, bolaX = 0, bolaY = 0, bolaVX = 0, bolaVY = 0, ultBola = 0;
+  function arder(ms, azul, nivel) {
+    arde = Math.max(arde, performance.now() + ms);
+    ardeAzul = azul || false;
+    ardeNivel = Math.max(1, Math.min(12, nivel || 1));
+    preparar(); encender();
+    const k = document.getElementById('stickKnob');
+    if (k) {                                   // una llama u otra, nunca las dos a la vez
+      k.classList.remove('ardiendo', 'ardiendoAzul');
+      k.classList.add(azul ? 'ardiendoAzul' : 'ardiendo');
+    }
+    if (!corriendo) { corriendo = true; ultimo = performance.now(); requestAnimationFrame(pintar); }
+  }
+  function emitirLlama(dt, ahora) {
+    const k = document.getElementById('stickKnob');
+    if (!k) return;
+    const r = k.getBoundingClientRect();
+    if (!r.width) return;
+    const nx = r.left + r.width / 2, ny = r.top + r.height / 2;
+    if (ultBola) { bolaVX = (nx - bolaX) / Math.max(.008, dt); bolaVY = (ny - bolaY) / Math.max(.008, dt); }
+    bolaX = nx; bolaY = ny; ultBola = ahora;
+    const queda = (arde - ahora) / 1000;
+    const fuerza = Math.min(1, queda / .8);                    // se va apagando al final
+    const rad = r.width * .5;
+    const nv = ardeNivel;
+    /* MEZCLA: el fuego de verdad es azul en la base (donde más quema) y naranja
+       arriba. Así que a partir del nivel 5 emitimos de los dos y queda una llama
+       con corazón azul y penacho naranja, en vez de todo azul. */
+    const mezcla = (arriba) => {
+      if (nv < 5) return { L: 'llama', B: 'brasa' };
+      // cerca de la bola casi todo azul; según sube, más naranja
+      const pAzul = arriba ? .28 : .78;
+      return Math.random() < pAzul ? { L: 'llamaAzul', B: 'brasaAzul' } : { L: 'llama', B: 'brasa' };
+    };
+
+    /* Altura que puede alcanzar la llamarada. En horizontal la dejamos llegar arriba
+       del todo; en vertical la cortamos al 45% o te taparía el juego. */
+    const techo = ny - (HORIZONTAL() ? innerHeight * .96 : innerHeight * .45) * Math.min(1, (nv - 2) / 6);
+    const subeHasta = Math.max(0, ny - techo);
+    const vSube = subeHasta > 0 ? Math.sqrt(2 * 620 * subeHasta) : 0;
+
+    // fuego base, cada vez más denso
+    const n = 2 + Math.round(nv * 1.4);
+    for (let i = 0; i < n; i++) {
+      const a = az(0, 6.28), d = az(0, rad * .8);
+      parts.push({ t: mezcla(false).L, x: nx + Math.cos(a) * d, y: ny + Math.sin(a) * d * .8,
+                   vx: -bolaVX * .22 + az(-40, 40) * (1 + nv * .1),
+                   vy: -az(90, 230) - Math.abs(bolaVY) * .1 - nv * 26,
+                   vida: az(.16, .38 + nv * .03) * fuerza, max: .7,
+                   r: az(16, 34) * (1 + nv * .09), giro: 0 });
+    }
+    // columna que sube de verdad, a partir del nivel 3, con las dos llamas trenzadas
+    if (nv >= 3 && vSube > 0) {
+      for (let i = 0; i < Math.round(nv * 1.1); i++) {
+        const alto = i % 2 === 0;                       // alternamos: unas suben más
+        parts.push({ t: mezcla(alto).L, x: nx + az(-rad * .7, rad * .7), y: ny,
+                     vx: az(-70, 70) - bolaVX * .1, vy: -vSube * (alto ? az(.85, 1.08) : az(.5, .8)),
+                     vida: az(.5, 1), max: 1, r: az(26, 52) * (1 + nv * .07), giro: 0, sube: true });
+      }
+      if (nv >= 6 && Math.random() < .55) {
+        parts.push({ t: ardeAzul ? 'nucleoAzul' : 'nucleo', x: nx + az(-8, 8), y: ny,
+                     vx: az(-20, 20), vy: -vSube * az(.8, 1.1),
+                     vida: az(.35, .6), max: .6, r: az(28, 46), giro: 0, sube: true });
+      }
+    }
+    // chispas de las dos clases
+    const chispas = nv >= 3 ? Math.min(1, .25 + nv * .12) : (ardeAzul ? .5 : .3);
+    if (Math.random() < chispas) {
+      for (let i = 0; i < 1 + Math.floor(nv / 3); i++) {
+        parts.push({ t: mezcla(true).B, x: nx + az(-10, 10), y: ny,
+                     vx: -bolaVX * .3 + az(-140, 140) * (1 + nv * .12),
+                     vy: -az(200, 460) - nv * 60,
+                     vida: az(.3, .7), max: .7, r: az(3, 8 + nv * .5), g: 520, giro: 0, sube: true });
+      }
+    }
+    // chispas blancas de soldadura: rápidas, finas y con rebote
+    if (nv >= 4 && Math.random() < .35 + nv * .05) {
+      for (let i = 0; i < 1 + Math.floor(nv / 4); i++) {
+        const a = az(-2.6, -.5);
+        const v = az(500, 1500) + nv * 90;
+        parts.push({ t: 'chispa', x: nx + az(-6, 6), y: ny + az(-6, 6),
+                     vx: Math.cos(a) * v * az(.5, 1) * (Math.random() < .5 ? 1 : -1),
+                     vy: Math.sin(a) * v, g: 1400,
+                     vida: az(.25, .6), max: .6, r: az(3, 9), giro: 0 });
+      }
+    }
+    // ¡y los muelles y tuercas del joystick! esto ya es que lo has reventado
+    if (nv >= 7 && Math.random() < .1 + (nv - 7) * .05) {
+      const cual = Math.random() < .55 ? 'muelle' : 'tuerca';
+      parts.push({ t: cual, x: nx + az(-10, 10), y: ny - 6,
+                   vx: az(-420, 420), vy: -az(600, 1150),
+                   rot: az(0, 6.28), vrot: az(-14, 14),
+                   vida: az(1.1, 1.9), max: 1.9, r: az(20, 34) });
+    }
+    // humillo cuando ya va muy caliente
+    if (nv >= 5 && Math.random() < .12) {
+      parts.push({ t: 'humo', x: nx + az(-14, 14), y: ny - 10,
+                   vx: az(-40, 40), vy: -az(60, 150),
+                   vida: az(.7, 1.3), max: 1.3, r: az(40, 90), giro: 0 });
+    }
+    if (ahora > arde) {
+      arde = 0;
+      k.classList.remove('ardiendo', 'ardiendoAzul');
+    }
+  }
+
+  let ultimo = 0, destello = null;
+  function pintar(ahora) {
+    const dt = Math.min(.05, (ahora - ultimo) / 1000); ultimo = ahora;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+    if (arde) emitirLlama(dt, ahora);
+    // el núcleo va dejando llama por donde pasa: eso es lo que da el aspecto de bola de fuego
+    for (const p of parts) {
+      if ((p.t !== 'nucleo' && p.t !== 'nucleoAzul') || !p.estela || p.vida <= 0) continue;
+      for (let i = 0; i < 2; i++) {
+        const dx = p.sube ? az(-8, 8) : -p.dir * az(0, 18) + az(-6, 6);
+        const dy = p.sube ? az(4, 26) : az(-9, 9);
+        parts.push({ t: p.azul ? 'llamaAzul' : 'llama', x: p.x + dx, y: p.y + dy,
+                     vx: p.sube ? az(-60, 60) : -p.dir * az(20, 110) + p.vx * .1,
+                     vy: p.sube ? az(20, 140) : az(-70, 70),
+                     vida: az(.14, .32), max: .32, r: az(28, 62), giro: 0 });
+      }
+    }
+
+    // humo primero, por debajo del fuego
+    ctx.globalCompositeOperation = 'source-over';
+    dibujar('humo', dt);
+    // y el fuego con mezcla aditiva, que es lo que da el brillo bueno
+    ctx.globalCompositeOperation = 'lighter';
+    dibujar('llama', dt); dibujar('llamaAzul', dt);
+    dibujar('brasa', dt); dibujar('brasaAzul', dt);
+    dibujar('chispa', dt);
+    dibujar('orbe', dt);
+    dibujar('nucleo', dt); dibujar('nucleoAzul', dt);
+    // las piezas del mando no brillan, se ven macizas: van aparte y por encima
+    ctx.globalCompositeOperation = 'source-over';
+    dibujarPiezas(dt);
+    ctx.globalCompositeOperation = 'lighter';
+
+    // destello de salida
+    if (destello) {
+      destello.vida -= dt;
+      if (destello.vida <= 0) destello = null;
+      else {
+        const a = destello.vida / destello.max;
+        const gr = ctx.createRadialGradient(destello.x, destello.y, 0, destello.x, destello.y, destello.r);
+        if (destello.azul) {
+          gr.addColorStop(0, `rgba(232,248,255,${a * .6})`);
+          gr.addColorStop(.4, `rgba(90,180,255,${a * .26})`);
+          gr.addColorStop(1, 'rgba(20,70,255,0)');
+        } else {
+          gr.addColorStop(0, `rgba(255,246,220,${a * .5})`);
+          gr.addColorStop(.4, `rgba(255,170,60,${a * .2})`);
+          gr.addColorStop(1, 'rgba(255,90,0,0)');
+        }
+        ctx.fillStyle = gr;
+        ctx.fillRect(destello.x - destello.r, destello.y - destello.r, destello.r * 2, destello.r * 2);
+      }
+    }
+    // ondas expansivas
+    for (let i = ondas.length - 1; i >= 0; i--) {
+      const o = ondas[i];
+      o.vida -= dt; o.r += 1150 * (o.k || 1) * dt;
+      if (o.vida <= 0) { ondas.splice(i, 1); continue; }
+      const a = o.vida / o.max;
+      ctx.strokeStyle = o.azul ? `rgba(${120 + 110 * a | 0},210,255,${a * .34})`
+                                : `rgba(255,${140 + 90 * a | 0},60,${a * .28})`;
+      ctx.lineWidth = 1.5 + 4 * a;
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, 7); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    // limpiar los muertos
+    for (let i = parts.length - 1; i >= 0; i--) if (parts[i].vida <= 0) parts.splice(i, 1);
+    if (parts.length || ondas.length || destello || arde) requestAnimationFrame(pintar);
+    else { corriendo = false; ctx.clearRect(0, 0, innerWidth, innerHeight); apagar(); }
+  }
+
+  function dibujarPiezas(dt) {
+    for (const p of parts) {
+      if (p.t !== 'muelle' && p.t !== 'tuerca') continue;
+      p.vida -= dt;
+      if (p.vida <= 0) continue;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += 1500 * dt;                       // el hierro cae rápido
+      p.vx *= .995;
+      p.rot += p.vrot * dt;
+      const a = p.vida / p.max;
+      ctx.globalAlpha = Math.min(1, a * 2.2);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.drawImage(sprites[p.t], -p.r / 2, -p.r / 2, p.r, p.r);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function dibujar(tipo, dt) {
+    const base = tipo.replace('Azul', '');
+    for (const p of parts) {
+      if (p.t !== tipo) continue;
+      p.vida -= dt;
+      if (p.vida <= 0) continue;
+      if (p.t === 'orbe') {                       // chispas que giran alrededor de la bola
+        p.ang += p.vel * dt;
+        p.x = (bolaX || p.cx) + Math.cos(p.ang) * p.rad;
+        p.y = (bolaY || p.cy) + Math.sin(p.ang) * p.rad * .55;
+        const a0 = p.vida / p.max;
+        ctx.globalAlpha = Math.min(1, a0 * 1.4);
+        const t0 = p.r * (.5 + a0 * .7);
+        ctx.drawImage(sprites[p.azul ? 'brasaAzul' : 'brasa'], p.x - t0 / 2, p.y - t0 / 2, t0, t0);
+        continue;
+      }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += (p.g || (base === 'humo' ? -70 : (p.sube ? 620 : 240))) * dt;  // lo lanzado hacia arriba frena y cae
+      p.vx *= (base === 'brasa' ? .985 : .94);
+      p.vy *= .97;
+      const a = p.vida / p.max;
+      const tam = base === 'nucleo' ? p.r * (.75 + a * .5)
+                : p.r * (base === 'humo' ? (1.7 - a * .8) : (.3 + a * .95));
+      ctx.globalAlpha = base === 'humo' ? a * .45 : Math.min(1, base === 'nucleo' ? a * 1.8 : a * 1.3);
+      if (base === 'nucleo') {                       // doble pasada: el corazón blanco quema más
+        ctx.drawImage(sprites.nucleo, p.x - tam / 2, p.y - tam / 2, tam, tam);
+        ctx.drawImage(sprites.nucleo, p.x - tam / 4, p.y - tam / 4, tam / 2, tam / 2);
+      }
+      ctx.drawImage(sprites[tipo], p.x - tam / 2, p.y - tam / 2, tam, tam);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  return { lanzar, preparar, arder, orbes: (n, azul) => {
+    const k = document.getElementById('stickKnob');
+    if (!k) return;
+    const r = k.getBoundingClientRect();
+    for (let i = 0; i < n; i++) {
+      parts.push({ t: 'orbe', ang: (i / n) * 6.28, vel: az(3.4, 5), rad: r.width * az(.75, 1.15),
+                   cx: r.left + r.width / 2, cy: r.top + r.height / 2,
+                   vida: 2.6, max: 2.6, r: az(9, 16), azul: !!azul });
+    }
+  } };
+})();
+
+/* --- detector del cuarto de círculo + puñetazo --- */
+let fuegoOn = true;
+try { fuegoOn = localStorage.getItem('sala_fuego') !== '0'; } catch (e) {}
+const DIRIDX = { 4: 'arriba', 5: 'abajo', 6: 'izq', 7: 'der' };
+const BOTONES = [0, 1, 8, 9];                  // solo los botones de la cara (nada de L y R)
+const estadoDir = { arriba: 0, abajo: 0, izq: 0, der: 0 };
+let historia = [], armaFuego = null, ultimoFuego = 0, ultimoTipo = '';
+
+/* ---------- CALOR: cuantos más especiales encadenes, más arde el mando ----------
+   La racha sube con cada bola o shoryuken si no tardas más de 7 s en el siguiente,
+   y el calor baja solito. En vertical se limita la altura de las llamas, que si no
+   te tapan media pantalla. */
+let racha = 0, ultimoEspecial = 0;
+const HORIZONTAL = () => { try { return matchMedia('(orientation: landscape)').matches; } catch (e) { return innerWidth > innerHeight; } };
+function subirCalor() {
+  const t = performance.now();
+  racha = (t - ultimoEspecial < 7000) ? racha + 1 : 1;
+  ultimoEspecial = t;
+  return racha;
+}
+setInterval(() => {
+  if (racha && performance.now() - ultimoEspecial > 7000) {
+    racha = 0;
+    const st = document.getElementById('stick');
+    if (st) st.classList.remove('temblando', 'temblandoMucho');
+    const c = document.getElementById('comboBox');
+    if (c) c.classList.remove('on');
+  }
+}, 500);
+
+/* cartelito de racha, estilo recreativa */
+function pintarRacha(n) {
+  let c = document.getElementById('comboBox');
+  if (!c) {
+    c = document.createElement('div');
+    c.id = 'comboBox';
+    document.body.appendChild(c);
+  }
+  const titulos = ['', '', 'CALENTANDO', 'EN LLAMAS', 'ARDIENDO', 'INFERNO',
+                   'FUERA DE CONTROL', 'EL MANDO PIDE AGUA', 'ESTO YA NO ES LEGAL',
+                   'DIOS DEL JOYSTICK'];
+  const t = titulos[Math.min(n, titulos.length - 1)];
+  c.innerHTML = `<b>×${n}</b>` + (t ? `<i>${t}</i>` : '');
+  c.className = 'on n' + Math.min(n, 10);
+  clearTimeout(window._combo);
+  window._combo = setTimeout(() => c.classList.remove('on'), 2600);
+  // el mando tiembla de verdad cuando te pasas de frenada
+  const st = document.getElementById('stick');
+  if (st) {
+    st.classList.toggle('temblando', n >= 4 && n < 8);
+    st.classList.toggle('temblandoMucho', n >= 8);
+  }
+}
+
+function octante() {
+  const v = (estadoDir.abajo ? 'abajo' : estadoDir.arriba ? 'arriba' : '');
+  const h = (estadoDir.der ? 'der' : estadoDir.izq ? 'izq' : '');
+  return (v + (v && h ? '-' : '') + h) || 'centro';
+}
+function verDireccion() {
+  const o = octante(), t = performance.now();
+  if (historia.length && historia[historia.length - 1].o === o) return;
+  historia.push({ o, t });
+  if (historia.length > 12) historia.shift();
+  detectarGesto();
+}
+
+/* Recorremos el historial hacia atrás desde la posición actual.
+   Perdonamos los parpadeos por el centro (al rodar el pulgar la zona muerta
+   suelta un instante) y no exigimos que el gesto empiece desde parado:
+   si vienes andando hacia delante también cuenta. */
+function detectarGesto() {
+  const n = historia.length;
+  if (!n) return;
+  const cur = historia[n - 1], t = cur.t;
+
+  for (const [diag, frente, dir] of [['abajo-der', 'der', 1], ['abajo-izq', 'izq', -1]]) {
+
+    // ---- HADOUKEN: abajo, (abajo-delante), delante ----
+    if (cur.o === frente) {
+      let vioAbajo = false;
+      for (let i = n - 2; i >= 0; i--) {
+        const h = historia[i];
+        if (t - h.t > 460) break;                 // el cuarto de círculo tiene que ser rápido
+        if (h.o === diag || h.o === 'centro') continue;
+        if (h.o === 'abajo') { vioAbajo = true; }
+        break;
+      }
+      if (vioAbajo) { armaFuego = { dir, t, tipo: 'bola' }; return; }
+    }
+
+    // ---- SHORYUKEN: delante, abajo, abajo-delante ----
+    if (cur.o === diag) {
+      let vioAbajo = false, vioFrente = false;
+      for (let i = n - 2; i >= 0; i--) {
+        const h = historia[i];
+        if (t - h.t > 620) break;
+        if (h.o === 'centro') continue;
+        if (h.o === 'abajo') { vioAbajo = true; continue; }
+        if (h.o === frente && vioAbajo) { vioFrente = true; }
+        break;
+      }
+      if (vioAbajo && vioFrente) { armaFuego = { dir, t, tipo: 'ascenso' }; return; }
+    }
+  }
+}
+
+function verBoton(idx, valor) {
+  if (!fuegoOn || !valor || !armaFuego) return;
+  /* en partida en red ni de broma: el canvas de partículas a pantalla completa
+     roba justo los fotogramas que el lockstep no puede perder */
+  try { if (window.EJS_emulator && window.EJS_emulator.isNetplay) return; } catch (e) {}
+  const t = performance.now();
+  if (t - armaFuego.t > 330 || t - ultimoFuego < 900) return;       // ventana corta y sin repetir
+  // hay que seguir manteniendo la dirección final: así es como se lanza de verdad
+  const frente = armaFuego.dir > 0 ? estadoDir.der : estadoDir.izq;
+  const manteniendo = armaFuego.tipo === 'ascenso' ? (frente || estadoDir.abajo) : frente;
+  if (!manteniendo) return;
+  ultimoFuego = t;
+  const dir = armaFuego.dir, tipo = armaFuego.tipo;
+  armaFuego = null; historia = [];
+  // ¿dos bolas seguidas? eso es combo: fuego azul y la bola arde más rato
+  const combo = tipo === 'bola' && ultimoTipo === 'bola' && (t - ultimoFuego) < 2600;
+  ultimoTipo = tipo;
+  // sale de la mano: desde el joystick (o la cruceta) hacia delante
+  const el = document.getElementById('stick') ||
+             document.querySelector('.ejs_virtualGamepad_left') ||
+             document.querySelector('canvas.ejs_canvas');
+  let x = innerWidth * .25, y = innerHeight * .62;
+  if (el) { const r = el.getBoundingClientRect(); if (r.width) { x = r.left + r.width / 2; y = r.top + r.height / 2; } }
+  const nivel = subirCalor();
+  const azul = nivel >= 5;                      // a partir de cinco, fuego azul de verdad
+  FUEGO.lanzar(x, y, dir, tipo, azul, nivel);
+  if (nivel >= 2) pintarRacha(nivel);
+  // arde más rato y más fuerte según la racha; a partir de 3 no se apaga entre golpes
+  const rato = nivel >= 3 ? 5000 + nivel * 900 : (Math.random() < .45 ? 3600 : 0);
+  if (rato) FUEGO.arder(rato, azul, nivel);
+  if (nivel >= 3) FUEGO.orbes(Math.min(3 + nivel, 12), azul);
+  // la vibración también escala
+  if (nivel >= 8)      vibrar([40, 30, 40, 30, 40, 30, 40, 30, 160]);
+  else if (nivel >= 5) vibrar([30, 40, 30, 40, 30, 40, 110]);
+  else if (nivel >= 3) vibrar([25, 35, 25, 35, 80]);
+  else vibrar(tipo === 'ascenso' ? [18, 24, 22, 24, 70] : [25, 30, 60]);
+}
+
+/* enganchamos la entrada del emulador: así funciona con joystick, cruceta y mando físico */
+function engancharFuego() {
+  const em = window.EJS_emulator;
+  if (!em || !em.gameManager || em.gameManager.__fuego) return false;
+  const gm = em.gameManager;
+  const orig = gm.simulateInput.bind(gm);
+  gm.simulateInput = (jugador, idx, valor) => {
+    try {
+      if (DIRIDX[idx] !== undefined) { estadoDir[DIRIDX[idx]] = valor ? 1 : 0; verDireccion(); }
+      else if (BOTONES.includes(idx)) verBoton(idx, valor);
+    } catch (e) { console.warn('[sala200] fallo en el detector de gestos:', e); }
+    return orig(jugador, idx, valor);
+  };
+  gm.__fuego = true;
+  return true;
+}
+const espera = setInterval(() => { if (engancharFuego()) clearInterval(espera); }, 800);
+window.SALA_FUEGO = (dir) => {           // para probarlo a mano
+  const el = document.getElementById('stick');
+  const r = el ? el.getBoundingClientRect() : { left: innerWidth * .2, top: innerHeight * .6, width: 120, height: 120 };
+  FUEGO.lanzar(r.left + r.width / 2, r.top + r.height / 2, dir || 1);
+  return 'fuego';
+};
+
+/* ================= SONIDO TRAS GRABAR =================
+   Al grabar, iOS pone la sesión en "modo llamada" y saca el sonido flojo.
+   No vuelve solo: hay que empujarlo de vuelta a modo reproducción. */
+/* --- 1. Sesión de audio de iOS ---
+   Al grabar, el sistema pasa a 'play-and-record': baja el volumen y saca el sonido
+   por el auricular de llamadas. No vuelve solo; hay que pedirle 'playback' a mano. */
+function sesionAudio(tipo) {
+  try { if (navigator.audioSession) { navigator.audioSession.type = tipo; return true; } } catch (e) {}
+  return false;
+}
+
+/* --- 2. Todos los contextos de audio, fichados ---
+   Suspender y reanudar un contexto obliga a iOS a recalcular por dónde saca el sonido.
+   Hay que parchear ANTES de que el emulador cree el suyo. */
+const CTXS = [];
+['AudioContext', 'webkitAudioContext'].forEach(n => {
+  const Orig = window[n];
+  if (!Orig || Orig._sala) return;
+  const P = function (...a) { const c = new Orig(...a); CTXS.push(c); return c; };
+  P.prototype = Orig.prototype; P._sala = true;
+  try { window[n] = P; } catch (e) {}
+});
+function contextos() {
+  const l = CTXS.slice();
+  try { const m = window.Module; if (m && m.SDL2 && m.SDL2.audioContext) l.push(m.SDL2.audioContext); } catch (e) {}
+  try { const em = window.EJS_emulator; if (em && em.audioContext) l.push(em.audioContext); } catch (e) {}
+  return l.filter((c, i, a) => c && a.indexOf(c) === i);
+}
+
+/* --- 3. Silencio de verdad ---
+   El WAV que usaba antes tenía CERO muestras: el navegador ni lo reproducía,
+   así que el empujón para cambiar de ruta no llegaba a ocurrir nunca. */
+function wavSilencio(ms) {
+  const sr = 8000, n = Math.round(sr * ms / 1000), buf = new ArrayBuffer(44 + n * 2);
+  const v = new DataView(buf);
+  const txt = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  txt(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); txt(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  txt(36, 'data'); v.setUint32(40, n * 2, true);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+const URL_SILENCIO = wavSilencio(400);
+/* recordamos el último volumen REAL (mayor que cero) para poder devolverlo sin equivocarnos */
+let volBueno = 0.7;
+setInterval(() => {
+  const em = window.EJS_emulator;
+  if (em && typeof em.volume === 'number' && em.volume > 0.02) volBueno = em.volume;
+}, 1000);
+
+/* El emulador guarda {volume, muted} en el navegador y lo reaplica al arrancar.
+   Si alguna vez quedó "muted", el juego arranca mudo PARA SIEMPRE. Lo desactivamos. */
+function limpiarAjustesAudio() {
+  try {
+    const raw = localStorage.getItem('ejs-settings');
+    const o = raw ? JSON.parse(raw) : {};
+    const roto = (o.muted === true) || !(o.volume > 0.02);
+    o.muted = false;
+    if (!(o.volume > 0.02)) o.volume = 0.7;
+    localStorage.setItem('ejs-settings', JSON.stringify(o));
+    if (roto) volBueno = o.volume;
+    return roto;
+  } catch (e) { return false; }
+}
+limpiarAjustesAudio();   // antes de que cargue el emulador
+
+/* Ojo con setVolume del emulador: hace this.muted = (t === 0).
+   Por eso NUNCA hay que pasarle cero "de paso", y hay que quitar el mute a mano. */
+function forzarSonido() {
+  const em = window.EJS_emulator;
+  if (!em) return false;
+  try {
+    let v = (typeof em.volume === 'number' && em.volume > 0.02) ? em.volume : volBueno;
+    if (!(v > 0.02)) v = 0.7;
+    em.volume = v;
+    em.muted = false;
+    if (typeof em.setVolume === 'function') em.setVolume(v);
+    em.muted = false;                 // setVolume lo recalcula: nos aseguramos
+    volBueno = v;
+    return true;
+  } catch (e) { return false; }
+}
+function restaurarSonido(intenso) {
+  const paso = (reciclar) => {
+    // 1) pedirle al sistema que vuelva a modo reproducción
+    sesionAudio('playback');
+    // 2) reproducir audio REAL por un elemento normal: es lo que cambia la ruta de salida
+    try {
+      const a = new Audio(URL_SILENCIO);
+      a.volume = 1;
+      a.setAttribute('playsinline', '');
+      const pr = a.play();
+      if (pr && pr.then) pr.catch(() => {});
+    } catch (e) {}
+    // 3) los contextos dormidos, despiertos; y si toca, un ciclo para que iOS recalcule la salida
+    contextos().forEach(c => {
+      try {
+        if (reciclar && c.state === 'running') { c.suspend().then(() => c.resume()).catch(() => {}); }
+        else if (c.state !== 'running') { c.resume().catch(() => {}); }
+      } catch (e) {}
+    });
+    // 4) quitar el silencio y devolver el volumen bueno
+    forzarSonido();
+  };
+  paso(false);
+  if (intenso) {
+    setTimeout(() => paso(true), 250);          // el ciclo, una vez y con la grabación ya cerrada
+    [700, 1400, 2500, 4000].forEach(t => setTimeout(() => paso(false), t));
+  } else {
+    [300, 900].forEach(t => setTimeout(() => paso(false), t));
+  }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) restaurarSonido(); });
+/* el emulador aplica sus ajustes guardados al terminar de cargar: le quitamos el mute después */
+[1200, 2500, 4500, 8000].forEach(t => setTimeout(forzarSonido, t));
+if (!TACTIL) [1500, 3500, 6000].forEach(t => setTimeout(() => {
+  try {
+    const em = window.EJS_emulator;
+    if (em && typeof em.toggleVirtualGamepad === 'function') em.toggleVirtualGamepad(false);
+  } catch (e) {}
+}, t));
+
+/* Las notas de voz se quitaron (2026-08-04): daban problemas y su sondeo de
+   /api/audio cada 2 s lastraba la partida. El arreglo de sonido de iOS de arriba
+   se queda: sigue haciendo falta para el mute fantasma de EmulatorJS. */
+
+/* ---------- avisos de la partida en red ---------- */
+const npBar = document.getElementById('npBar');
+let npEstado = 'fuera', npNombres = [], npOculta = null;
+function npMostrar(html, clase, ocultarEn) {
+  npBar.innerHTML = html;
+  npBar.className = 'on ' + (clase || '');
+  clearTimeout(npOculta);
+  if (ocultarEn) npOculta = setTimeout(() => npBar.classList.remove('on'), ocultarEn);
+}
+function npPito(freqs, dur, vol) {
+  try {
+    const A = new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = A.currentTime, st = dur / freqs.length;
+    freqs.forEach((f, i) => {
+      const o = A.createOscillator(), g = A.createGain(), t = t0 + i * st;
+      o.type = 'square'; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || .07, t + .01);
+      g.gain.exponentialRampToValueAtTime(.0001, t + st);
+      o.connect(g); g.connect(A.destination); o.start(t); o.stop(t + st + .02);
+    });
+    setTimeout(() => A.close(), (dur + .3) * 1000);
+  } catch (e) {}
+}
+function nombresDe(np) {
+  const out = [];
+  try {
+    for (const k in np.players) {
+      const p = np.players[k];
+      out.push((p && (p.player_name || p.name)) || 'JUGADOR');
+    }
+  } catch (e) {}
+  return out;
+}
+/* ---------- modo red: interfaz mínima ----------
+   En partida online escondemos todo lo que pueda desincronizar (guardar/cargar
+   estado, pausar, reiniciar, trucos, ajustes del core) o robar fotogramas.
+   Queda: pantalla, suavizado, sonido, emojis y salir. */
+const NP_OCULTAR = ['playPause', 'restart', 'saveState', 'loadState',
+                    'saveSavFiles', 'loadSavFiles', 'cheat', 'settings'];
+let enRed = false;
+function modoRed(v) {
+  if (enRed === v) return;
+  enRed = v;
+  document.body.classList.toggle('enred', v);
+  try {
+    const bb = window.EJS_emulator.elements.bottomBar;
+    NP_OCULTAR.forEach(k => (bb[k] || []).forEach(el => {
+      if (el && el.style) el.style.display = v ? 'none' : '';
+    }));
+  } catch (e) {}
+}
+
+function vigilarNetplay() {
+  const em = window.EJS_emulator;
+  const np = em && em.netplay;
+  modoRed(!!(em && em.isNetplay));
+  try { mantenerMitad(); } catch (e) {}
+  if (!np || !np.players || !np.playerID) {
+    if (npEstado !== 'fuera') { npEstado = 'fuera'; npNombres = []; npBar.classList.remove('on'); }
+    return;
+  }
+  const nombres = nombresDe(np);
+  const n = nombres.length;
+  const yo = (np.name || 'TÚ').toUpperCase();
+  const sala = np.room_name || (np.extra && np.extra.room_name) || '';
+
+  if (npEstado === 'fuera') {
+    npEstado = n > 1 ? 'jugando' : 'esperando';
+    npNombres = nombres;
+    if (npEstado === 'esperando') {
+      npMostrar(`${TP.npEspera}<span class="dots"></span>`, 'wait');
+      npPito([660, 880], .2, .06);
+    } else {
+      npMostrar(`${TP.npEnPartida} · <b>${nombres.map(x => x.toUpperCase()).join(' vs ')}</b>`, 'go', 4000);
+    }
+    return;
+  }
+  // ¿ha entrado o salido alguien?
+  if (n !== npNombres.length) {
+    const antes = npNombres.slice();
+    npNombres = nombres;
+    if (n > antes.length) {
+      const nuevo = nombres.find(x => !antes.includes(x)) || 'ALGUIEN';
+      npMostrar(`▶ <b>${nuevo.toUpperCase()}</b> ${TP.npUnido}<br>
+                 <span style="font-size:9px;color:#6fa585">${nombres.map(x => x.toUpperCase()).join(' · ')}</span>`, 'go', 5000);
+      npPito([523, 659, 784, 1046], .45, .075);
+      vibrar(45);
+      npEstado = 'jugando';
+      fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'netplay' }) }).catch(() => {});
+    } else {
+      const ido = antes.find(x => !nombres.includes(x)) || 'EL OTRO JUGADOR';
+      npMostrar(`◀ <b>${ido.toUpperCase()}</b> ${TP.npSalio}<br>${TP.npEsperando}<span class="dots"></span>`, 'wait');
+      npPito([440, 300], .25, .06);
+      npEstado = 'esperando';
+    }
+  }
+}
+setInterval(vigilarNetplay, 700);
+
+/* ---------- llegar invitado: abrimos el netplay solo ---------- */
+const QUIERO_UNIRME = p.get('join') === '1';
+const ANFITRION = p.get('host') || '';
+function quienSoy() { try { return (localStorage.getItem('sala_user') || '').trim(); } catch (e) { return ''; } }
+/* Si el navegador no guarda el usuario (sesión vieja, almacenamiento limpiado...) se lo
+   preguntamos a la API: sin nombre no se puede crear sala de dos jugadores. */
+if (!quienSoy()) {
+  fetch('/api/me').then(r => r.json()).then(d => {
+    if (d && d.user) { try { localStorage.setItem('sala_user', d.user); } catch (e) {} }
+  }).catch(() => {});
+}
+
+/* ---------- EL QUE SE UNE ----------
+   1) llama a la puerta del anfitrión para que abra sala
+   2) abre el menú de red y se mete en su sala en cuanto aparece, sin tocar nada */
+let buscando = false, intentosSala = 0;
+function llamarALaPuerta() {
+  if (!QUIERO_UNIRME || !ANFITRION) return;
+  fetch('/api/llamada', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ para: ANFITRION, juego: p.get('name') || '' }) }).catch(() => {});
+}
+async function buscarSalaDe() {
+  const em = window.EJS_emulator;
+  if (!em || !em.started) return;
+  if (!em.netplay || !em.netplay.getOpenRooms) { prepararNetplay(); return; }
+  if (em.isNetplay) return;   // ya dentro; si la sala muriera, seguimos buscando y nos reenganchamos solos
+  try {
+    const salas = await em.netplay.getOpenRooms();
+    // solo salas donde de verdad se puede entrar: sin contraseña y con hueco
+    const claves = Object.keys(salas || {})
+      .filter(c => !salas[c].password && (salas[c].current || 0) < (salas[c].max || 2));
+    if (!claves.length) {
+      if (intentosSala++ % 4 === 0) llamarALaPuerta();            // insistimos de vez en cuando
+      npMostrar(intentosSala > 22
+        ? TP.npVersion                                            // sala invisible: seguramente otra ROM
+        : `${TP.npConectando} <b>${(ANFITRION || TP.npColega).toUpperCase()}</b><span class="dots"></span>`, 'wait');
+      return;
+    }
+    // la suya si la encontramos por nombre; si no, la única que haya
+    const k = claves.find(c => String(salas[c].owner_name || '').toLowerCase() === ANFITRION.toLowerCase()) || claves[0];
+    // si el intento anterior sigue en vuelo no lanzamos otro; si en 6s no ha
+    // cuajado (lo mira el "ya dentro" de arriba), se reintenta solo
+    if (Date.now() - (buscarSalaDe.ultimoIntento || 0) < 6000) return;
+    buscarSalaDe.ultimoIntento = Date.now();
+    npMostrar(`${TP.npConectando} <b>${String(salas[k].owner_name || ANFITRION).toUpperCase()}</b><span class="dots"></span>`, 'wait');
+    em.netplay.joinRoom(k, salas[k].room_name);
+  } catch (e) {}
+}
+const tUnir = QUIERO_UNIRME ? setInterval(buscarSalaDe, 1600) : null;
+/* OJO: no llamamos a la puerta hasta que NUESTRO emulador esté listo. Antes se
+   llamaba al cargar la página: el anfitrión abría la sala al momento y se pasaba
+   un minuto esperando mientras al invitado aún le bajaba el core/BIOS/ROM (Neo Geo
+   la primera vez tarda); la sala moría y el invitado se quedaba en "conectando". */
+if (QUIERO_UNIRME) {
+  const tPuerta = setInterval(() => {
+    const em = window.EJS_emulator;
+    if (!em || !em.started) return;
+    clearInterval(tPuerta);
+    llamarALaPuerta();
+    setTimeout(llamarALaPuerta, 4000);
+  }, 700);
+}
+
+/* ---------- EL QUE YA ESTÁ JUGANDO ----------
+   Si alguien llama a su puerta, la sala se abre SOLA: el flujo es transparente,
+   el que juega solo ve "conectando con X" y luego "partida sincronizada". */
+let salaAbierta = false, avisadoDe = '';
+function abrirSalaPara(quien) {
+  const em = window.EJS_emulator;
+  if (!em || salaAbierta || em.isNetplay) return;
+  prepararNetplay();
+  if (!netplayPreparado) return;                       // aún cargando: mirarLlamadas reintenta
+  salaAbierta = true;                                  // que no se dispare dos veces
+  try {
+    em.netplay.openRoom((quienSoy() || 'SALA').toUpperCase(), 2, '');
+    if (em.netplayMenu) em.netplayMenu.style.display = 'none';
+    npMostrar(`${TP.npConectando} <b>${quien.toUpperCase()}</b><span class="dots"></span>`, 'wait', 9000);
+  } catch (e) {
+    salaAbierta = false;
+    npMostrar(TP.npFallo + (e.message || '').slice(0, 40), 'wait', 6000);
+  }
+}
+
+function mirarLlamadas() {
+  const em = window.EJS_emulator;
+  if (!em || !em.started || QUIERO_UNIRME || salaAbierta || em.isNetplay) return;
+  fetch('/api/llamada').then(r => r.json()).then(d => {
+    const l = (d.llamadas || [])[0];
+    if (!l) return;
+    if (l.de !== avisadoDe) {                          // primer aviso de este colega
+      avisadoDe = l.de;
+      npPito([523, 659, 784], .35, .07);
+      vibrar([40, 60, 40]);
+    }
+    abrirSalaPara(l.de);                               // sala sola, sin botones: a jugar
+  }).catch(() => {});
+}
+setInterval(mirarLlamadas, 2500);
+
+/* El emulador pide escribir un "Player Name" cada vez. Como ya sabemos quién eres
+   por tu perfil, lo rellenamos y lo aceptamos solos. */
+function ponerNombreNetplay() {
+  const em = window.EJS_emulator;
+  if (!em || !em.netplay || em.netplay.name) return false;
+  const yo = quienSoy();
+  if (!yo) return false;
+  const cab = [...document.querySelectorAll('.ejs_netplay_name_heading')].find(h => h.offsetParent !== null);
+  if (!cab) return false;
+  const caja = (cab.closest('div') || {}).parentElement;
+  const campo = caja && caja.querySelector('input[type="text"]');
+  const boton = caja && caja.querySelector('.ejs_popup_submit');
+  if (!campo || !boton) return false;
+  campo.value = yo.slice(0, 20);
+  boton.click();                      // el emulador guarda el nombre y cierra el cartelito
+  return true;
+}
+setInterval(ponerNombreNetplay, 400);
+
+/* ---------- destapar el netplay (viene oculto de fábrica) ---------- */
+let netplayListo = false;
+function activarNetplay() {
+  const em = window.EJS_emulator;
+  if (netplayListo || !em || !em.elements || !em.elements.bottomBar) return;
+  const b = em.elements.bottomBar.netplay;
+  if (!b || !b[0]) return;
+  em.netplayEnabled = true;
+  b[0].style.display = '';
+  b[0].title = 'Jugar 2 jugadores por red';
+  netplayListo = true;
+}
+setInterval(activarNetplay, 800);
+
+/* ---------- netplay preparado en silencio ----------
+   En cuanto el juego arranca dejamos el objeto netplay creado, con el nombre
+   puesto y el menú oculto: ni popups ni parpadeos cuando llegue la partida.
+   Todo pasa en la misma tarea de JS, así que el menú ni llega a pintarse. */
+let netplayPreparado = false;
+function prepararNetplay() {
+  const em = window.EJS_emulator;
+  if (netplayPreparado || !em || !em.started || !quienSoy()) return;
+  activarNetplay();
+  if (!netplayListo) return;
+  if (!em.netplay || !em.netplay.name) {
+    try { em.openNetplayMenu(); } catch (e) { return; }
+    try { ponerNombreNetplay(); } catch (e) {}
+  }
+  if (em.netplay && em.netplay.name) {
+    if (em.netplayMenu) em.netplayMenu.style.display = 'none';
+    try { em.netplay.updateList.stop(); } catch (e) {}   // sin sala no hace falta sondear /list
+    netplayPreparado = true;
+  } else if (em.netplayMenu) {
+    em.netplayMenu.style.display = 'none';               // sin nombre aún: menú fuera igualmente
+  }
+}
+setInterval(prepararNetplay, 700);
+
+
+/* ================= NETPLAY EN SERIO: LOCKSTEP =================
+   El sincronizador que trae EmulatorJS está inacabado de fábrica (el propio
+   autor lo marca experimental): el invitado ni aplica sus propios botones y
+   cada lado ejecuta los inputs en frames distintos. Lo sustituimos entero:
+
+   - Al entrar el 2º jugador, el anfitrión manda un savestate y los dos
+     arrancan desde el mismo punto exacto.
+   - Después solo viajan botones: cada lado ejecuta EXACTAMENTE los mismos
+     inputs en los mismos frames, con RETARDO frames de margen (~83 ms).
+   - Si faltan los inputs del otro (lag), el juego se pausa solo y se reanuda
+     en cuanto llegan. Si algo se atasca de verdad, se re-sincroniza con un
+     savestate nuevo sin que haya que tocar nada. */
+/* margen base en frames (a 60fps, 5f ≈ 83 ms de input lag). Ajustable para
+   experimentar: localStorage.setItem('sala_retardo','4') en consola y recargar. */
+const RETARDO = Math.max(3, Math.min(8, parseInt(localStorage.getItem('sala_retardo') || '5', 10) || 5));
+const RETARDO_MAX = 10;            // techo del margen adaptativo (~166 ms)
+const L = {
+  on: false,                       // lockstep en marcha
+  hs: false,                       // handshake (envío de estado) en curso
+  init: 0,                         // frame bruto del emulador en el arranque común
+  pend: [],                        // botones míos aún sin mandar (los de este frame)
+  mios: {}, suyos: {},             // inputs por frame: {nºframe: [[jugador,botón,valor],...]}
+  ultimoRemoto: -1,                // último nº de frame recibido del otro (llegan en orden)
+  esperando: null,                 // frame que no podemos ejecutar por falta de inputs
+  gen: 0,                          // nº de sincronización: descarta mensajes rezagados de la anterior
+  fAnt: 0,                         // último frame ya procesado por lkTick
+  d: RETARDO,                      // margen ACTUAL: sube solo si la conexión lo pide (nunca baja en partida)
+  stalls: [],                      // parones recientes, para decidir cuándo subir el margen
+  tEspera: 0, tEstado: 0, tPedido: 0, tRoto: 0,
+  cola: [], v2: false,             // batching: 2 frames por mensaje (si el rival lo habla)
+  chkF: 1800, chkMios: {}, chkSuyos: {},   // huellas del estado para pillar desyncs
+  tSubida: 0,                      // última vez que subió el margen (para poder bajarlo)
+  tPing: 0, rtt: 0,                // medición de ida y vuelta con el rival
+  afk: 0,                          // el rival avisó de que salía un momento (wasap...)
+  tEstadoMax: 8000                 // paciencia con el envío del estado (según su tamaño)
+};
+function lkRaw(em) { return parseInt(em.gameManager.getFrameNum()) || 0; }
+function lkReset() {
+  L.on = false; L.hs = false; L.pend = []; L.fAnt = 0; L.stalls = []; L.afk = 0;
+  L.cola = [];                     // ojo: L.v2 NO se limpia aquí: es por rival, se olvida en lkParar
+  L.chkF = 1800; L.chkMios = {}; L.chkSuyos = {};
+  L.mios = {}; L.suyos = {}; L.ultimoRemoto = -1; L.esperando = null;
+}
+function lkEnviar(em, m) { try { em.netplay.socket.emit('data-message', m); } catch (e) {} }
+function lkMiIndice(em) { return em.netplay.owner ? 0 : 1; }   // anfitrión = mando 1
+
+/* Aplica los inputs del frame k en el MISMO orden en los dos lados
+   (primero anfitrión, luego invitado): eso es lo que mantiene el determinismo. */
+function lkAplicar(em, k) {
+  const yo = { idx: lkMiIndice(em), q: L.mios[k] || [] };
+  const el = { idx: 1 - yo.idx, q: L.suyos[k] || [] };
+  const orden = (yo.idx === 0) ? [yo, el] : [el, yo];
+  for (const g of orden) for (const i of g.q) {
+    try { em.gameManager.functions.simulateInput(i[0], i[1], i[2]); } catch (e) {}
+  }
+  delete L.mios[k]; delete L.suyos[k];
+}
+
+/* Corazón del lockstep: corre al acabar CADA frame emulado. */
+/* con batching (v2) los mensajes salen de 2 en 2: la mitad de trabajo de socket
+   y la mitad de despertares del hilo en el móvil. OJO: antes de cualquier pausa
+   hay que vaciar la cola, o el rival espera un latido que no va a llegar. */
+function lkFlush(em) {
+  if (L.cola.length) { lkEnviar(em, { s2: 'in2', g: L.gen, p: L.cola }); L.cola = []; }
+}
+function lkFrame(em, f) {
+  // huella del estado cada 1800 frames (~30 s), en el MISMO frame en ambos
+  // lados: si no coinciden, las dos realidades han divergido (el kart borracho)
+  if (L.v2 && f === L.chkF) { L.chkF += 1800; lkChequeo(em, f); }
+  // 1) mando mis botones para el frame f+L.d; aunque no haya ninguno,
+  //    el mensaje (o su hueco en la cola) es el latido que deja avanzar al otro
+  L.mios[f + L.d] = L.pend;
+  if (L.v2) {
+    L.cola.push([f + L.d, L.pend]);
+    if (L.cola.length >= 2) lkFlush(em);
+  } else {
+    lkEnviar(em, { s2: 'in', g: L.gen, f: f + L.d, k: L.pend });
+  }
+  L.pend = [];
+  // 2) el siguiente frame (f+1) solo corre si ya tenemos los inputs del otro.
+  //    Los primeros RETARDO frames van de gracia: nadie programó inputs ahí.
+  const falta = f + 1;
+  if (falta > RETARDO && L.ultimoRemoto < falta) {
+    L.esperando = falta; L.tEspera = Date.now();
+    lkFlush(em);                               // que al rival le llegue TODO antes de parar
+    lkAtasco(em);
+    em.pause(true);
+    return;
+  }
+  lkAplicar(em, falta);
+}
+
+/* ---- margen adaptativo ----
+   Con el SOR2 se vio en el log: cuando la latencia con el rival supera el margen
+   fijo, el juego pausa/reanuda EN CADA FRAME y se arrastra (de 60 a 33 fps) hasta
+   "colgarse". Si nos paramos muchas veces seguidas, subimos NUESTRO margen y le
+   pedimos al otro que suba el suyo (que es el que a mí me alimenta). Solo se sube:
+   bajarlo en mitad de la partida sí podría desincronizar. Se resetea al salir. */
+function lkAtasco(em) {
+  const t = Date.now();
+  L.stalls.push(t);
+  while (L.stalls.length && t - L.stalls[0] > 4000) L.stalls.shift();
+  if (L.stalls.length >= 6 && L.d < RETARDO_MAX) {
+    L.d++;
+    L.tSubida = Date.now();
+    L.stalls.length = 0;
+    lkEnviar(em, { s2: 'lag', g: L.gen });
+    console.log('[lockstep] la conexión pide margen: retardo propio a', L.d, 'frames');
+  }
+}
+
+/* OJO: Module.postMainLoop está MUERTO en los cores modernos (el core lo
+   registra una sola vez al arrancar su bucle, antes de que exista el netplay;
+   por eso el netplay de fábrica jamás mandó un frame). El bucle del emulador
+   va con requestAnimationFrame, así que nos colgamos de ahí: tras cada tick
+   miramos si el contador de frames del core ha avanzado. Correr justo después
+   del frame, en la misma tarea de JS, mantiene el gating exacto. */
+function lkTick() {
+  const em = window.EJS_emulator;
+  if (!em || !L.on || !em.gameManager) return;
+  let f = lkRaw(em) - L.init;
+  if (f <= L.fAnt) return;                   // este tick no ha corrido ningún frame
+  // si por lo que sea corrieron varios frames, procesamos cada uno en orden
+  while (L.fAnt < f && L.on && L.esperando == null) {
+    L.fAnt++;
+    lkFrame(em, L.fAnt);
+  }
+}
+(() => {
+  const rafOrig = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (cb) => rafOrig((ts) => {
+    /* el mando se lee JUSTO antes del frame: así la pulsación entra en el
+       mensaje de ESTE frame del lockstep y no espera al siguiente (-1 frame de lag) */
+    try { leerMando(); } catch (e) {}
+    cb(ts);
+    try { lkTick(); } catch (e) {}
+  });
+})();
+
+/* El anfitrión arranca la partida sincronizada: pausa, savestate y a esperar. */
+function lkArrancar(em) {
+  if (L.hs || L.on) return;
+  lkReset(); L.hs = true; L.tEstado = Date.now();
+  L.gen = (Date.now() % 1e9) + Math.floor(Math.random() * 1000);
+  em.pause(true);
+  setTimeout(() => {                         // deja asentarse el frame en curso
+    let estado = null;
+    try { estado = em.gameManager.getState(); }
+    catch (e) { console.warn('[lockstep] no pude sacar el estado:', e); L.hs = false; return; }
+    /* Los savestates de N64 son de varios MB: subirlos desde un móvil tarda, y
+       reintentar a los 8 s apilaba estados enteros hasta reventar el socket
+       (el cuelgue del Mario Kart). Gzip nativo (queda en una fracción) y la
+       paciencia del reintento escala con lo que de verdad hay que subir. */
+    const mandar = (d, z) => {
+      L.tEstadoMax = 8000 + Math.round(d.length / 400);    // ≈400 bytes/ms de subida
+      lkEnviar(em, { s2: 'state', g: L.gen, z: z ? 1 : 0, v: 2, d });
+      L.tEstado = Date.now();
+      console.log('[lockstep] estado enviado:', d.length, 'bytes', z ? '(gzip)' : '');
+    };
+    if (window.CompressionStream && L.v2 && estado && estado.length > 300000) {
+      new Response(new Blob([estado]).stream().pipeThrough(new CompressionStream('gzip')))
+        .arrayBuffer().then(b => mandar(new Uint8Array(b), true))
+        .catch(() => mandar(estado, false));
+    } else {
+      mandar(estado, false);
+    }
+  }, 120);
+}
+
+/* Arranque común: a partir de aquí los dos cuentan frames desde cero. */
+function lkComenzar(em) {
+  const enSala = L.hs || em.isNetplay;
+  lkReset();
+  if (!enSala) return;
+  if (L.d > RETARDO && Date.now() - L.tSubida > 45000) {
+    L.d--;                         // la mala racha pasó: recuperamos margen (y con él, respuesta)
+    console.log('[lockstep] conexión estable: retardo baja a', L.d, 'frames');
+  }
+  L.init = lkRaw(em); L.fAnt = 0; L.on = true;
+  npMostrar(`${TP.npSync}<br><span style="font-size:9px;color:#6fa585">${TP.npDale}</span>`, 'go', 3000);
+  em.play(true);
+}
+
+/* Huella rápida del estado: FNV-1a muestreando 1 de cada 13 bytes. No hace
+   falta cobertura criptográfica: cuando dos emuladores divergen, la RAM
+   diverge a lo ancho y el muestreo lo pilla igual. */
+function lkChequeo(em, f) {
+  let st = null;
+  try { st = em.gameManager.getState(); } catch (e) { return; }
+  if (!st || !st.length) return;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < st.length; i += 13) { h = ((h ^ st[i]) * 0x01000193) >>> 0; }
+  if (em.netplay.owner) {
+    L.chkMios[f] = h;
+    for (const k in L.chkMios) if (+k < f - 4000) delete L.chkMios[k];
+    lkCompara(em, f);
+  } else {
+    lkEnviar(em, { s2: 'chk', g: L.gen, f, h });
+  }
+}
+function lkCompara(em, f) {
+  const mia = L.chkMios[f], suya = L.chkSuyos[f];
+  if (mia === undefined || suya === undefined) return;   // aún falta una de las dos
+  delete L.chkMios[f]; delete L.chkSuyos[f];
+  if (mia !== suya) {
+    console.warn('[lockstep] desync detectado en el frame', f, '→ resincronizando');
+    npMostrar(TP.npDesync, 'wait', 5000);
+    lkReset();
+    lkArrancar(em);
+  }
+}
+
+/* Todo lo que llega del otro jugador pasa por aquí. */
+function lkMensaje(em, t) {
+  if (!t || !t.s2) return;                   // restos del protocolo viejo: se ignoran
+  if (t.s2 === 'emo') {                      // emoji o frase del rival
+    try {
+      if (t.f) {
+        const texto = String(t.f).slice(0, 60);
+        mostrarFrase(texto, String(t.e || '').slice(0, 8), String(t.de || 'RIVAL').slice(0, 20));
+        decir(texto);                          // y el móvil se la canta en alto
+      } else {
+        mostrarEmoji(String(t.e || '').slice(0, 8), String(t.de || 'RIVAL').slice(0, 20));
+      }
+    } catch (e) {}
+    return;
+  }
+  if (t.s2 === 'zzz') {                      // el rival se fue un momento (wasap, llamada)
+    L.afk = Date.now();
+    try { em.pause(true); } catch (e) {}
+    npMostrar(TP.npAfk, 'wait');
+    return;
+  }
+  if (t.s2 === 'wake') {                     // ha vuelto: sincronía fresca y a seguir
+    L.afk = 0;
+    if (em.netplay.owner) { lkReset(); lkArrancar(em); }
+    else if (Date.now() - L.tPedido > 3000) { L.tPedido = Date.now(); lkEnviar(em, { s2: 'resync' }); }
+    return;
+  }
+  if (t.s2 === 'chk') {                      // huella del invitado: compara el anfitrión
+    if (t.g !== L.gen || !em.netplay.owner) return;
+    L.chkSuyos[t.f] = t.h;
+    for (const k in L.chkSuyos) if (+k < t.f - 4000) delete L.chkSuyos[k];
+    lkCompara(em, t.f);
+    return;
+  }
+  if (t.s2 === 'png') { lkEnviar(em, { s2: 'pog', t: t.t }); return; }   // eco del ping
+  if (t.s2 === 'pog') { L.rtt = Date.now() - t.t; return; }               // rtt medido
+  if (t.s2 === 'lag') {                      // el rival se atasca esperándome: mando antes
+    if (t.g === L.gen && L.d < RETARDO_MAX) {
+      L.d++;
+      L.tSubida = Date.now();
+      console.log('[lockstep] el rival pide margen: retardo propio a', L.d, 'frames');
+    }
+    return;
+  }
+  if (t.s2 === 'in' || t.s2 === 'in2') {
+    if (t.g !== L.gen) return;               // paquete rezagado de otra sincronización
+    if (t.s2 === 'in2') {
+      for (const par of (t.p || [])) {
+        if (Array.isArray(par[1]) && par[1].length) L.suyos[par[0]] = par[1];
+        if (par[0] > L.ultimoRemoto) L.ultimoRemoto = par[0];
+      }
+    } else {
+      if (Array.isArray(t.k) && t.k.length) L.suyos[t.f] = t.k;
+      if (t.f > L.ultimoRemoto) L.ultimoRemoto = t.f;
+    }
+    if (L.on && L.esperando != null && L.ultimoRemoto >= L.esperando) {
+      const k = L.esperando; L.esperando = null;
+      lkAplicar(em, k);
+      em.play(true);
+    }
+    return;
+  }
+  if (t.s2 === 'state' && !em.netplay.owner) {      // llega el estado del anfitrión
+    lkReset(); L.hs = true; L.gen = t.g; L.tEstado = Date.now();
+    L.v2 = (t.v | 0) >= 2;                   // ¿habla batching el anfitrión?
+    em.pause(true);
+    const cargar = (bytes) => {
+      try { em.gameManager.loadState(bytes); }
+      catch (e) { console.warn('[lockstep] no pude cargar el estado:', e); L.hs = false; return; }
+      lkEnviar(em, { s2: 'ready', g: L.gen, v: 2 });
+    };
+    const d = new Uint8Array(t.d);
+    if (t.z) {
+      new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('gzip')))
+        .arrayBuffer().then(b => cargar(new Uint8Array(b)))
+        .catch(e => { console.warn('[lockstep] no pude descomprimir el estado:', e); L.hs = false; });
+    } else {
+      cargar(d);
+    }
+    return;
+  }
+  if (t.s2 === 'ready' && em.netplay.owner) {
+    if (t.g !== L.gen) return;
+    L.v2 = (t.v | 0) >= 2;                   // ¿habla batching el invitado?
+    lkEnviar(em, { s2: 'go', g: L.gen });
+    lkComenzar(em);
+    return;
+  }
+  if (t.s2 === 'go' && !em.netplay.owner) {
+    if (t.g !== L.gen) return;
+    lkComenzar(em);
+    return;
+  }
+  if (t.s2 === 'resync' && em.netplay.owner) {
+    if (L.hs && Date.now() - L.tEstado < (L.tEstadoMax || 5000)) return;   // ya hay un estado en vuelo
+    lkReset();
+    lkArrancar(em);
+  }
+}
+
+function lkParar(em) {
+  const iba = L.on || L.hs;
+  lkReset();
+  L.afk = 0;
+  L.v2 = false;                                          // el próximo rival puede hablar otra versión
+  L.d = RETARDO;                                         // margen aprendido: solo vale para ESA conexión
+  if (iba) { try { em.play(true); } catch (e) {} }       // que el que queda siga jugando
+}
+
+/* Vigilante: arranca/re-sincroniza/para según el estado real de la sala. */
+setInterval(() => {
+  const em = window.EJS_emulator;
+  if (!em || !em.netplay || !em.netplay.getUserCount) return;
+  if (!em.isNetplay) {
+    salaAbierta = false;          // si la sala murió, que un nuevo toque pueda reabrirla
+    if (L.on || L.hs) lkParar(em);
+    return;
+  }
+  /* socket muerto (túnel caído, wifi fuera): sin esto te quedabas CLAVADO esperando
+     inputs que jamás llegarían. Se corta el lockstep y sigues jugando en local. */
+  const sk = em.netplay.socket;
+  if (sk && sk.connected === false) {
+    if (!L.tRoto) { L.tRoto = Date.now(); return; }
+    if (Date.now() - L.tRoto > 4000 && (L.on || L.hs)) {
+      lkParar(em);
+      try { em.netplay.leaveRoom(); } catch (e) {}       // sala fuera: así el reenganche automático arranca
+      npMostrar(TP.npCorte, 'wait', 7000);
+    }
+    return;
+  }
+  L.tRoto = 0;
+  if (L.on) { try { lkFlush(em); } catch (e) {} }   // nada se queda en la cola más de 1 s
+  if (L.afk) {                                   // el rival está en el wasap: paciencia
+    if (Date.now() - L.afk > 120000) {           // 2 min y no vuelve: cada uno a lo suyo
+      lkParar(em);
+      try { em.netplay.leaveRoom(); } catch (e) {}
+      npMostrar(TP.npAfkFin, 'wait', 7000);
+    }
+    return;
+  }
+  const n = em.netplay.getUserCount();
+  if (L.on && n >= 2 && Date.now() - L.tPing > 5000) {
+    L.tPing = Date.now();
+    lkEnviar(em, { s2: 'png', t: Date.now() });
+  }
+  if ((L.on || L.hs) && n < 2) { lkParar(em); return; }  // el otro se fue
+  /* invitado esperando un 'go' que se perdió por el camino: el anfitrión tiene su
+     propio vigilante, pero el invitado se quedaba pausado PARA SIEMPRE. Soltamos
+     el handshake y la rama de abajo pedirá un resync limpio. */
+  if (L.hs && !em.netplay.owner && Date.now() - L.tEstado > 8000) L.hs = false;
+  if (n >= 2 && !L.on && !L.hs) {                        // en sala pero sin partida sincronizada
+    if (em.netplay.owner) lkArrancar(em);
+    else if (Date.now() - L.tPedido > 6000) { L.tPedido = Date.now(); lkEnviar(em, { s2: 'resync' }); }
+    return;
+  }
+  if (L.on && L.esperando != null && Date.now() - L.tEspera > 4000) {
+    L.tEspera = Date.now();                              // atasco de verdad: savestate nuevo
+    if (em.netplay.owner) { lkReset(); lkArrancar(em); }
+    else lkEnviar(em, { s2: 'resync' });
+    return;
+  }
+  if (L.hs && em.netplay.owner && Date.now() - L.tEstado > (L.tEstadoMax || 8000)) {
+    L.hs = false; lkArrancar(em);                        // el invitado nunca contestó
+  }
+}, 1000);
+
+/* Salir un momento al wasap ya no mata la partida: se avisa al rival para que
+   espere en pausa y, al volver, la sincronía se rehace sola con estado fresco. */
+document.addEventListener('visibilitychange', () => {
+  const em = window.EJS_emulator;
+  if (!em || !em.isNetplay || !(L.on || L.hs)) return;
+  if (document.hidden) {
+    lkEnviar(em, { s2: 'zzz', g: L.gen });
+  } else {
+    lkEnviar(em, { s2: 'wake', g: L.gen });
+    if (em.netplay.owner) { lkReset(); lkArrancar(em); }  // el anfitrión reparte estado él mismo
+  }
+});
+
+/* Enganche: cada vez que EmulatorJS (re)crea su objeto netplay, le colamos
+   nuestro motor encima. Los handlers del socket llaman a estas funciones por
+   nombre, así que con sobreescribirlas basta. */
+function instalarLockstep(em) {
+  em.netplay.simulateInput = (p, id, v) => {             // mis botones: a la cola, no al juego
+    if (!em.isNetplay || !L.on) return;
+    L.pend.push([lkMiIndice(em), id, v]);
+  };
+  em.netplay.dataMessage = (t) => lkMensaje(em, t);
+  em.netplay.sync = () => {                              // lo dispara users-updated en el anfitrión
+    if (em.netplay.getUserCount() >= 2) lkArrancar(em); else lkParar(em);
+  };
+}
+setInterval(() => {
+  const em = window.EJS_emulator;
+  if (!em || em.lockstepPuesto || typeof em.defineNetplayFunctions !== 'function') return;
+  const orig = em.defineNetplayFunctions.bind(em);
+  em.defineNetplayFunctions = () => { orig(); instalarLockstep(em); };
+  if (em.netplay && em.netplay.simulateInput) instalarLockstep(em);  // por si ya estaba creado
+  em.lockstepPuesto = true;
+}, 500);
+
+
+/* ================= COLOCAR EL MANDO A TU GUSTO =================
+   Mantén pulsado un botón y arrástralo donde quieras. Se guarda por consola
+   y por orientación, en fracciones de pantalla, así aguanta cualquier móvil. */
+/* La orientación por matchMedia es fiable; innerWidth/innerHeight tardan en actualizarse
+   al girar el móvil y nos hacían leer la configuración de la orientación equivocada. */
+function orientacion() {
+  try { return matchMedia('(orientation: landscape)').matches ? 'h' : 'v'; }
+  catch (e) { return innerWidth > innerHeight ? 'h' : 'v'; }
+}
+const POSKEY = () => `sala_padpos_${sys}_${orientacion()}`;
+
+/* El mando de N64 se rediseñó (A azul, B verde, C amarillas en rombo). Quien ya
+   tuviera botones colocados a mano con el mando viejo seguiría viendo aquel lío,
+   así que limpiamos esa configuración UNA vez y en todos sus aparatos. */
+if (sys === 'n64') {
+  try {
+    if (localStorage.getItem('sala_n64_rediseno') !== '1') {
+      localStorage.setItem('sala_n64_rediseno', '1');
+      ['h', 'v'].forEach(o => {
+        localStorage.removeItem(`sala_padpos_n64_${o}`);
+        fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clave: `sala_padpos_n64_${o}`, pos: {} }) }).catch(() => {});
+      });
+    }
+  } catch (e) {}
+}
+let posiciones = {};
+let posTocadas = false;          // ¿ha movido algo el usuario en esta partida?
+let layoutPerfil = null;         // lo que hay guardado en tu perfil, por clave
+try { posiciones = JSON.parse(localStorage.getItem(POSKEY()) || '{}'); } catch (e) {}
+// y la que tengas guardada en tu perfil manda (así te sigue a cualquier aparato)
+fetch('/api/padlayout').then(r => r.json()).then(d => {
+  layoutPerfil = d.layout || {};
+  // guardamos en el navegador TODAS las claves del perfil, no solo la de ahora:
+  // así al girar la pantalla ya está lista la otra orientación sin esperar a la red
+  Object.entries(layoutPerfil).forEach(([k, v]) => {
+    if (k.startsWith('sala_padpos_') && v && Object.keys(v).length)
+      localStorage.setItem(k, JSON.stringify(v));
+  });
+  const st = layoutPerfil[`sala_stick_${sys}`];
+  if (st && typeof st.on !== 'undefined') {
+    stickModo = st.on === 2 ? 'ligero' : st.on ? 'bola' : 'cruz';
+    joystick = stickModo !== 'cruz';
+    try { localStorage.setItem(STICKKEY(), String(st.on)); } catch (e) {}
+    aplicarStick();
+  }
+  const mia = layoutPerfil[POSKEY()];
+  if (!posTocadas && mia && Object.keys(mia).length) {
+    posiciones = mia;
+    elementos().forEach(soltarFijado);
+    aplicarPosiciones(true);
+  }
+  if (joystick) colocarStick();
+}).catch(() => {});
+function guardarEnPerfil() {
+  const cuerpo = JSON.stringify({ clave: POSKEY(), pos: posiciones });
+  if (layoutPerfil) layoutPerfil[POSKEY()] = posiciones;
+  fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: cuerpo }).catch(() => {});
+}
+/* al salir del juego no da tiempo a un fetch normal: sendBeacon sí llega */
+function guardarYa() {
+  if (!posTocadas) return;
+  clearTimeout(window._gp);
+  const cuerpo = JSON.stringify({ clave: POSKEY(), pos: posiciones });
+  try {
+    if (navigator.sendBeacon &&
+        navigator.sendBeacon('/api/padlayout', new Blob([cuerpo], { type: 'application/json' }))) return;
+  } catch (e) {}
+  guardarEnPerfil();
+}
+addEventListener('pagehide', guardarYa);
+addEventListener('visibilitychange', () => { if (document.hidden) guardarYa(); });
+let modoColocar = false, arrastrando = null;
+if (p.get('resetpad') === '1') {
+  Object.keys(localStorage).filter(k => k.startsWith('sala_padpos_')).forEach(k => localStorage.removeItem(k));
+  localStorage.removeItem('sala_padscale');
+}
+
+const FLOTANTES = ['emojiBtn', 'pantBtn', 'padFloat', 'stick', 'volverBtn', 'pesetaBtn'];
+function idDe(el) {
+  if (el.id && FLOTANTES.includes(el.id)) return 'f_' + el.id;     // micro, emojis, pantalla, mando
+  if (el.classList.contains('ejs_virtualGamepad_left')) return 'dpad';
+  const c = [...el.classList].find(x => x.startsWith('b_'));
+  return c || null;
+}
+function elementos() {
+  // todo lo que se puede recolocar: mando completo + los botones flotantes
+  const zonaIzq = document.querySelector('.ejs_virtualGamepad_left');
+  const flot = FLOTANTES.map(id => document.getElementById(id)).filter(Boolean);
+  return [...document.querySelectorAll('.ejs_virtualGamepad_button'), zonaIzq, ...flot].filter(Boolean);
+}
+function fijar(el, x, y) {
+  // lo sacamos de su contenedor: cualquier ancestro con transform desplazaría al botón
+  if (el.parentElement && el.parentElement !== document.body) {
+    if (!el._padre) { el._padre = el.parentElement; el._sig = el.nextElementSibling; }
+    document.body.appendChild(el);
+  }
+  // con prioridad: el CSS del mando usa !important y si no, el botón salta a su sitio original
+  const S = el.style;
+  S.setProperty('position', 'fixed', 'important');
+  S.setProperty('left', Math.round(x) + 'px', 'important');
+  S.setProperty('top', Math.round(y) + 'px', 'important');
+  S.setProperty('right', 'auto', 'important');
+  S.setProperty('bottom', 'auto', 'important');
+  S.setProperty('margin', '0', 'important');
+  el.classList.add('sala-libre');
+}
+function soltarFijado(el) {
+  ['position', 'left', 'top', 'right', 'bottom', 'margin'].forEach(p => el.style.removeProperty(p));
+  el.classList.remove('sala-libre');
+  // lo devolvemos a su sitio original
+  if (el._padre) {
+    try { el._padre.insertBefore(el, el._sig && el._sig.parentElement === el._padre ? el._sig : null); }
+    catch (e) { el._padre.appendChild(el); }
+    el._padre = null; el._sig = null;
+  }
+}
+function aplicarPosiciones(forzar) {
+  if (!TACTIL) return;                            // en PC no hay mando táctil que colocar
+  if (arrastrando) return;                        // nunca mientras se arrastra
+  elementos().forEach(el => {
+    const id = idDe(el);
+    if (!id || !posiciones[id]) return;
+    if (!forzar && el.classList.contains('sala-libre')) return;   // ya colocado, no lo toques
+    const p = posiciones[id];
+    const w = el.offsetWidth || 60, h = el.offsetHeight || 60;
+    let x = p.x * innerWidth, y = p.y * innerHeight;
+    // red de seguridad: si el valor es raro lo metemos dentro de la pantalla,
+    // pero NO lo borramos (borrarlo era justo lo que te destrozaba la configuración)
+    if (!isFinite(x)) x = innerWidth * .5;
+    if (!isFinite(y)) y = innerHeight * .5;
+    x = Math.max(0, Math.min(innerWidth - w, x));
+    y = Math.max(0, Math.min(innerHeight - h, y));
+    fijar(el, x, y);
+  });
+}
+function guardarPos(el) {
+  const id = idDe(el);
+  if (!id) return;
+  const r = el.getBoundingClientRect();
+  posTocadas = true;
+  posiciones[id] = { x: r.left / innerWidth, y: r.top / innerHeight };
+  localStorage.setItem(POSKEY(), JSON.stringify(posiciones));
+  clearTimeout(window._gp); window._gp = setTimeout(guardarEnPerfil, 400);   // al perfil, sin agobiar
+}
+
+function barraColocar(mostrar) {
+  let b = document.getElementById('colocarBar');
+  if (!b && mostrar) {
+    b = document.createElement('div');
+    b.id = 'colocarBar';
+    b.innerHTML = `<span>${TP.colocar}</span>
+      <button id="colocarReset">RESET</button><button id="colocarOK">${TP.listo}</button>`;
+    document.body.appendChild(b);
+    b.querySelector('#colocarOK').onclick = () => setModo(false);
+    b.querySelector('#colocarReset').onclick = () => {
+      posiciones = {};
+      Object.keys(localStorage).filter(k => k.startsWith('sala_padpos_')).forEach(k => localStorage.removeItem(k));
+      fetch('/api/padlayout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ borrar: true }) }).catch(() => {});
+      elementos().forEach(soltarFijado);
+      setModo(false);
+    };
+  }
+  if (b) b.classList.toggle('on', !!mostrar);
+}
+function setModo(v) {
+  modoColocar = v;
+  escucharColocar(v);              // los listeners no pasivos solo viven en modo colocar
+  document.body.classList.toggle('colocando', v);
+  barraColocar(v);
+  if (v) vibrar(35);
+}
+
+/* --- gestos --- */
+function alPulsar(e) {
+  if (!TACTIL) return;
+  const el = e.target.closest('.ejs_virtualGamepad_button, .ejs_virtualGamepad_left, ' +
+                              '#emojiBtn, #pantBtn, #padFloat, #stick, #volverBtn, #pesetaBtn');
+  if (!el) return;
+  if (modoColocar) {
+    // ya estamos colocando: arrastre directo
+    e.preventDefault(); e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    fijar(el, r.left, r.top);                     // se queda exactamente donde está
+    arrastrando = { el, dx: pt.clientX - r.left, dy: pt.clientY - r.top,
+                    x0: pt.clientX, y0: pt.clientY, movido: false };
+    el.classList.add('cogido');
+    return;
+  }
+  // sin pulsación larga de un dedo: jugando se mantienen pulsados cruceta y botones.
+}
+
+/* --- gesto de TRES DEDOS mantenidos: entra o sale del modo colocar ---
+   Con dos se juega constantemente (cruceta + botón), con tres no. */
+let dosDedos = null;
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 3) {
+    clearTimeout(dosDedos);
+    dosDedos = setTimeout(() => { setModo(!modoColocar); }, 600);
+  }
+}, { capture: true, passive: true });
+['touchend', 'touchcancel'].forEach(ev =>
+  document.addEventListener(ev, () => clearTimeout(dosDedos), { capture: true, passive: true }));
+
+function alMover(e) {
+  if (!arrastrando) return;
+  e.preventDefault();
+  const pt = e.touches ? e.touches[0] : e;
+  if (Math.hypot(pt.clientX - arrastrando.x0, pt.clientY - arrastrando.y0) > 10) arrastrando.movido = true;
+  const el = arrastrando.el;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  fijar(el,
+    Math.max(0, Math.min(innerWidth - w, pt.clientX - arrastrando.dx)),
+    Math.max(0, Math.min(innerHeight - h, pt.clientY - arrastrando.dy)));
+}
+function alSoltar() {
+  if (arrastrando) {
+    const el = arrastrando.el, movido = arrastrando.movido;
+    el.classList.remove('cogido');
+    guardarPos(el);
+    arrastrando = null;
+    // un toque limpio sobre la cruceta (o sobre el joystick) los intercambia
+    const esCruceta = el.id === 'stick' || el.classList.contains('ejs_virtualGamepad_left') ||
+                      el.classList.contains('ejs_dpad_main');
+    if (!movido && esCruceta) cambiarStick();
+  }
+}
+/* OJO (rendimiento Android): estos gestos de arrastre son NO PASIVOS, y con un
+   listener no pasivo de touchmove a nivel de documento el navegador tiene que
+   esperar al JS en CADA movimiento del dedo antes de pintar el frame. Jugando
+   con la cruceta táctil eso es un peaje en cada fotograma. Así que solo se
+   escuchan mientras el modo colocar está activo; el resto del tiempo, ni existen. */
+function escucharColocar(on) {
+  const f = (on ? document.addEventListener : document.removeEventListener).bind(document);
+  ['touchstart', 'mousedown'].forEach(ev => f(ev, alPulsar, { capture: true, passive: false }));
+  ['touchmove', 'mousemove'].forEach(ev => f(ev, alMover, { capture: true, passive: false }));
+  ['touchend', 'touchcancel', 'mouseup'].forEach(ev => f(ev, alSoltar, { capture: true }));
+  if (!on) arrastrando = null;     // que un arrastre a medias no deje el estado colgado
+}
+// en modo colocar, los botones no deben disparar el juego
+['touchstart', 'touchend', 'click'].forEach(ev => document.addEventListener(ev, e => {
+  if (modoColocar && e.target.closest('.ejs_virtualGamepad_button, .ejs_virtualGamepad_left, ' +
+      '#emojiBtn, #pantBtn, #padFloat, #stick, #volverBtn, #pesetaBtn')) {
+    e.stopPropagation(); e.preventDefault();
+  }
+}, { capture: true }));
+
+setInterval(aplicarPosiciones, 3000);        // por si el emulador recrea el mando
+
+/* vigilante: ningún botón puede quedarse invisible o fuera de la pantalla.
+   Mide con getBoundingClientRect (fuerza layout): cuanto menos, mejor. */
+setInterval(() => {
+  if (!TACTIL || arrastrando || modoColocar) return;
+  elementos().forEach(el => {
+    if (!el.classList.contains('sala-libre')) return;
+    if (el.id === 'padFloat' && !document.body.classList.contains('fs')) return;   // este solo sale en pantalla completa
+    const r = el.getBoundingClientRect();
+    const fuera = r.width === 0 || r.height === 0 ||
+                  r.right < 8 || r.bottom < 8 || r.left > innerWidth - 8 || r.top > innerHeight - 8;
+    if (fuera) {
+      // lo traemos a la pantalla conservando lo que el usuario eligió
+      const id = idDe(el);
+      if (id && posiciones[id]) {
+        posiciones[id].x = Math.min(.88, Math.max(.02, posiciones[id].x));
+        posiciones[id].y = Math.min(.88, Math.max(.02, posiciones[id].y));
+        localStorage.setItem(POSKEY(), JSON.stringify(posiciones));
+        aplicarPosiciones(true);
+      } else soltarFijado(el);
+    }
+  });
+}, 6000);
+function recargarPosiciones() {
+  if (!TACTIL) return;
+  const clave = POSKEY();
+  let guardado = null;
+  if (layoutPerfil && layoutPerfil[clave] && Object.keys(layoutPerfil[clave]).length) {
+    guardado = layoutPerfil[clave];                       // el perfil manda
+  } else {
+    try { guardado = JSON.parse(localStorage.getItem(clave) || 'null'); } catch (e) {}
+  }
+  posiciones = guardado || {};
+  elementos().forEach(soltarFijado);      // a la base y aplicamos lo de esta orientación
+  aplicarPosiciones(true);
+  if (joystick) colocarStick();
+}
+/* Al girar, las medidas de la ventana tardan en asentarse. Esperamos a que dejen de
+   cambiar y volvemos a aplicar un par de veces, porque el emulador rehace el mando. */
+let ultOrient = orientacion(), medidas = '';
+function trasGirar() {
+  clearTimeout(window._rp);
+  window._rp = setTimeout(() => {
+    const ahora = innerWidth + 'x' + innerHeight;
+    if (ahora !== medidas) { medidas = ahora; trasGirar(); return; }   // aún moviéndose
+    ultOrient = orientacion();
+    recargarPosiciones();
+    [500, 1400].forEach(t => setTimeout(() => { if (orientacion() === ultOrient) aplicarPosiciones(true); }, t));
+  }, 320);
+}
+addEventListener('orientationchange', trasGirar);
+addEventListener('resize', trasGirar);
+try { matchMedia('(orientation: landscape)').addEventListener('change', trasGirar); } catch (e) {}
+
+/* ================= LECTOR DE MANDO PROPIO =================
+   El de EmulatorJS depende de que su menú esté creado y de ajustes guardados;
+   si algo falla, el mando se detecta pero no controla nada. Aquí leemos el mando
+   nosotros y hablamos directamente con el motor del emulador. */
+const MAPA_BOTONES = (sys === 'n64')
+  ? { 0: 0, 1: 1, 2: 1, 3: 0,            // ✕→A  ○→B  ▢→B  △→A
+      4: 10, 5: 11,                       // L1→L  R1→R
+      6: 12, 7: 12,                       // L2/R2 → Z
+      9: 3,                               // Options → START
+      12: 4, 13: 5, 14: 6, 15: 7 }        // cruceta
+  : { 0: 0, 1: 8, 2: 1, 3: 9,            // ✕→B  ○→A  ▢→Y  △→X
+      4: 10, 5: 11, 6: 12, 7: 13,        // L1 R1 L2 R2
+      8: 2, 9: 3,                        // Share→SELECT  Options→START
+      12: 4, 13: 5, 14: 6, 15: 7 };      // cruceta
+// ejes: [índice del eje, control cuando es negativo, control cuando es positivo, analógico]
+const MAPA_EJES = (sys === 'n64')
+  ? [[0, 17, 16, true], [1, 19, 18, true],      // stick izq → stick del N64
+     [2, 21, 20, false], [3, 23, 22, false]]    // stick der → botones C
+  : [[0, 6, 7, false], [1, 4, 5, false]];       // stick izq → cruceta
+const DZ = 0.28;
+const estado = {};
+
+/* El mando DE VERDAD. En muchos Android el navegador lista dispositivos fantasma
+   (motores de vibración, accesorios) que ocupan la ranura 0 sin tener botones:
+   si lees pads[0] a pelo, detectas "mando" pero el de verdad (ranura 1) ni se
+   entera. Elegimos: con botones de sobra, mejor si es de mapeo estándar. */
+function padReal() {
+  let pads = [];
+  try { pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean); } catch (e) {}
+  pads = pads.filter(p => p.buttons && p.buttons.length >= 4);
+  if (!pads.length) return null;
+  return pads.find(p => p.mapping === 'standard') ||
+         pads.sort((a, b) => b.buttons.length - a.buttons.length)[0];
+}
+
+function leerMando() {
+  if (!conMando) return;                     // sin mando real, ni tocamos getGamepads (60 veces/s)
+  const em = window.EJS_emulator;
+  if (!em || !em.gameManager || !em.started) return;
+  const p = padReal();
+  if (!p) return;
+
+  for (const [btn, ctrl] of Object.entries(MAPA_BOTONES)) {
+    const b = p.buttons[btn];
+    const pulsado = b ? (typeof b === 'object' ? b.pressed : b === 1) : false;
+    const clave = 'b' + btn;
+    if (estado[clave] !== pulsado) {
+      estado[clave] = pulsado;
+      try { em.gameManager.simulateInput(0, ctrl, pulsado ? 1 : 0); } catch (e) {}
+    }
+  }
+  for (const [eje, ctrlNeg, ctrlPos, analog] of MAPA_EJES) {
+    const v = p.axes[eje] || 0;
+    const neg = v < -DZ ? (analog ? Math.round(32767 * -v) : 1) : 0;
+    const pos = v > DZ ? (analog ? Math.round(32767 * v) : 1) : 0;
+    if (estado['n' + eje] !== neg) { estado['n' + eje] = neg;
+      try { em.gameManager.simulateInput(0, ctrlNeg, neg); } catch (e) {} }
+    if (estado['p' + eje] !== pos) { estado['p' + eje] = pos;
+      try { em.gameManager.simulateInput(0, ctrlPos, pos); } catch (e) {} }
+  }
+}
+/* la lectura principal va enganchada al frame (ver el envoltorio de
+   requestAnimationFrame); este intervalo lento es solo red de seguridad
+   para menús con el juego parado */
+setInterval(leerMando, 100);
+
+/* EmulatorJS trae su PROPIO sondeo de mandos a 100 Hz (getGamepads + recorrer
+   todos los botones cada 10 ms) que corre SIEMPRE, haya mando o no. Como el
+   input ya lo damos nosotros con leerMando, lo apagamos: sin mando se ahorra
+   entero, y con mando evita el doble bucle y la doble inyección de botones. */
+const tPollEJS = setInterval(() => {
+  const em = window.EJS_emulator;
+  if (!em || !em.gamepad || typeof em.gamepad.terminate !== 'function') return;
+  try { em.gamepad.terminate(); } catch (e) {}
+  clearInterval(tPollEJS);
+}, 1500);
+
+/* diagnóstico del mando: qué ve el navegador de verdad */
+function diag() {
+  if (!padPanel || !padPanel.classList.contains('on')) return;   // panel cerrado: ni un innerHTML
+  const el = document.getElementById('padDiag');
+  if (!el) return;
+  const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
+  const seguro = window.isSecureContext ? 'SÍ' : 'NO';
+  const api = navigator.getGamepads ? 'SÍ' : 'NO';
+  let permitido = '?';
+  try { permitido = document.featurePolicy ? (document.featurePolicy.allowsFeature('gamepad') ? 'SÍ' : 'NO') : '?'; } catch (e) {}
+  const modo = matchMedia('(display-mode: standalone)').matches ? 'APP'
+             : matchMedia('(display-mode: fullscreen)').matches ? 'APP-FS' : 'PESTAÑA';
+  let txt = `${modo} · ${location.hostname}<br>HTTPS: ${seguro} · API: ${api} · PERMISO: ${permitido} · MANDOS: ${pads.length}`;
+  const p = padReal();
+  if (p) {
+    const pulsado = p.buttons.findIndex(b => b.pressed);
+    const em = window.EJS_emulator;
+    const asig = em && Array.isArray(em.gamepadSelection) ? (em.gamepadSelection[0] ? 'SÍ' : 'NO') : '?';
+    const fantasmas = pads.length - 1;
+    txt += `<br>${p.id.slice(0, 30)} · ranura ${p.index} · ${p.mapping === 'standard' ? 'estándar' : 'mapeo raro'} · ${p.buttons.length} botones` +
+           (fantasmas > 0 ? ` · ${fantasmas} fantasma${fantasmas > 1 ? 's' : ''} ignorado${fantasmas > 1 ? 's' : ''}` : '') +
+           `<br>asignado a J1: ${asig} · botón: ${pulsado >= 0 ? pulsado : '—'}`;
+  } else if (pads.length) {
+    txt += `<br>solo veo dispositivos sin botones (fantasmas): ${pads.map(x => x.id.slice(0, 20)).join(' · ')}`;
+  } else {
+    txt += '<br>pulsa un botón del mando';
+  }
+  el.innerHTML = txt;
+}
+setInterval(diag, 700); diag();
+
+/* vibración corta al pulsar (Android; iOS la ignora sin drama) */
+function wireHaptics() {
+  document.querySelectorAll('.ejs_virtualGamepad_button, .ejs_dpad_main').forEach(el => {
+    if (el._h) return; el._h = 1;
+    el.addEventListener('touchstart', () => vibrar(12), { passive: true });
+  });
+}
+setTimeout(wireHaptics, 1500);
+setTimeout(() => {
+  const tip = document.getElementById('padTip');
+  if (!tip) return;
+  const puede = !!navigator.vibrate || /iP(hone|ad|od)/.test(navigator.platform);
+  if (!puede) tip.innerHTML += '<br>· este navegador no permite vibración';
+}, 2000);
+setTimeout(wireHaptics, 5000);
+
+/* el mando se difumina solo mientras juegas y vuelve al tocarlo */
+let idleT = null;
+function padAwake() {
+  const p = document.querySelector('.ejs_virtualGamepad_parent');
+  if (!p) return;
+  p.classList.remove('sala-idle');
+  clearTimeout(idleT);
+  idleT = setTimeout(() => p.classList.add('sala-idle'), 2600);
+}
+['touchstart', 'touchmove', 'pointerdown'].forEach(ev => addEventListener(ev, padAwake, { passive: true }));
+setTimeout(padAwake, 2500);
+// al girar el móvil, recolocamos el mando recargando su configuración
+function refit() { applyPadSize(); padAwake(); }
+addEventListener('orientationchange', () => setTimeout(refit, 350));
+addEventListener('resize', () => { clearTimeout(window._rf); window._rf = setTimeout(refit, 250); });
+if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+  clearTimeout(window._rf2); window._rf2 = setTimeout(refit, 300);
+});
+
+
+/* ---------- MAPEO DEL MANDO (DualSense y compatibles) ----------
+   Índices de EmulatorJS: 0=B 1=Y 2=SELECT 3=START 4..7=cruceta 8=A 9=X 10=L 11=R 12=L2 13=R2
+   En N64 cambian: 0=A 1=B 3=START 10=L 11=R 12=Z 16..19=stick 20..23=botones C           */
+const K = (t, g) => ({ value: t, value2: g });
+const CRUZ = {
+  4: K('up arrow', 'DPAD_UP'), 5: K('down arrow', 'DPAD_DOWN'),
+  6: K('left arrow', 'DPAD_LEFT'), 7: K('right arrow', 'DPAD_RIGHT'),
+};
+// mando estándar: ✕ y ○ son los botones de acción principales
+const MAPA_ESTANDAR = {
+  ...CRUZ,
+  0: K('x', 'BUTTON_1'),                 // B  ← ✕
+  8: K('z', 'BUTTON_2'),                 // A  ← ○
+  1: K('a', 'BUTTON_3'),                 // Y  ← ▢
+  9: K('s', 'BUTTON_4'),                 // X  ← △
+  10: K('q', 'LEFT_TOP_SHOULDER'),       // L  ← L1
+  11: K('e', 'RIGHT_TOP_SHOULDER'),      // R  ← R1
+  12: K('tab', 'LEFT_BOTTOM_SHOULDER'),  // L2 ← L2
+  13: K('r', 'RIGHT_BOTTOM_SHOULDER'),   // R2 ← R2
+  2: K('v', 'SELECT'),                   // SELECT ← Share
+  3: K('enter', 'START'),                // START  ← Options
+};
+// N64: stick analógico al stick izquierdo, botones C al derecho, Z al gatillo L2
+const MAPA_N64 = {
+  ...CRUZ,
+  0: K('x', 'BUTTON_1'),                       // A ← ✕
+  1: K('z', 'BUTTON_2'),                       // B ← ○
+  3: K('enter', 'START'),                      // START ← Options
+  10: K('q', 'LEFT_TOP_SHOULDER'),             // L ← L1
+  11: K('e', 'RIGHT_TOP_SHOULDER'),            // R ← R1
+  12: K('space', 'LEFT_BOTTOM_SHOULDER'),      // Z ← L2 (el gatillo trasero del N64)
+  19: K('w', 'LEFT_STICK_Y:-1'),               // stick arriba
+  18: K('s', 'LEFT_STICK_Y:+1'),               // stick abajo
+  17: K('a', 'LEFT_STICK_X:-1'),               // stick izquierda
+  16: K('d', 'LEFT_STICK_X:+1'),               // stick derecha
+  23: K('i', 'RIGHT_STICK_Y:-1'),              // C arriba
+  22: K('k', 'RIGHT_STICK_Y:+1'),              // C abajo
+  21: K('j', 'RIGHT_STICK_X:-1'),              // C izquierda
+  20: K('l', 'RIGHT_STICK_X:+1'),              // C derecha
+};
+const MAPA = (sys === 'n64') ? MAPA_N64 : MAPA_ESTANDAR;
+window.EJS_defaultControls = { 0: MAPA, 1: {}, 2: {}, 3: {} };
+
+/* si los ajustes guardados están corruptos, este botón los borra y recarga */
+function resetMando() {
+  try {
+    Object.keys(localStorage).forEach(k => { if (/ejs|EmulatorJS/i.test(k)) localStorage.removeItem(k); });
+    if (indexedDB.databases) {
+      indexedDB.databases().then(dbs => {
+        dbs.forEach(db => { if (/emulatorjs|ejs/i.test(db.name || '')) indexedDB.deleteDatabase(db.name); });
+        setTimeout(() => location.reload(), 400);
+      });
+    } else setTimeout(() => location.reload(), 200);
+  } catch (e) { location.reload(); }
+}
+document.getElementById('resetPad').addEventListener('click', resetMando);
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#colocarBtn')) {
+    document.getElementById('padPanel').classList.remove('on');   // fuera el panel, a colocar
+    setModo(true);
+  }
+});
+
+window.EJS_player = '#game';
+window.EJS_core = sysCore[sys] || sys;
+window.EJS_gameUrl = '/roms/' + p.get('rom');
+window.EJS_gameName = p.get('name') || '';
+window.EJS_pathtodata = 'ejs/';
+window.EJS_startOnLoaded = true;
+window.EJS_language = LANG === 'en' ? 'en-US' : 'es-ES';
+window.EJS_backgroundColor = '#030503';
+/* --- 2 jugadores por red: servidor propio en la Pi ---
+   El botón de netplay solo aparece si: modo experimental activo, servidor definido,
+   y un identificador de juego NUMÉRICO (el mismo número para los dos jugadores). */
+window.EJS_netplayServer = location.origin + '/';
+window.EJS_EXPERIMENTAL_NETPLAY = true;
+/* OJO: nada de EJS_DEBUG_XX. Con esa bandera el emulador intenta cargar sus ficheros
+   sueltos de desarrollo (que no espejamos) y la pantalla se queda en negro.
+   El botón de netplay lo destapamos nosotros más abajo, ya cargado el emulador. */
+window.EJS_gameID = (function (txt) {       // mismo juego → mismo número en ambos equipos
+  let h = 5381;
+  for (let i = 0; i < txt.length; i++) h = ((h * 33) ^ txt.charCodeAt(i)) >>> 0;
+  return h % 2000000;
+})(sys + '|' + (p.get('rom') || ''));
+window.EJS_Buttons = { netplay: true };
+window.EJS_alignStartButton = 'center';
+if (sys === 'neogeo' || sys === 'arcade') window.EJS_biosUrl = '/roms/NeoGeo/neogeo.zip';
+/* PS1: la BIOS de la consola mejora mucho la compatibilidad. Si la dejas en la carpeta
+   PSX del NAS como scph1001.bin, se usa; si no está, el núcleo tira de su BIOS interna.
+   Ojo: apuntar a un fichero que no existe hace que el emulador se niegue a arrancar,
+   así que se comprueba antes de cargar el emulador. */
+window.EJS_biosUrl = '';
+
+/* El emulador guarda en el navegador los juegos que bajas: la próxima vez cargan al
+   instante y se puede jugar sin conexión. El tope es por juego; lo que se acumule se
+   vacía desde el menú del emulador (Administrador de Caché). */
+window.EJS_CacheLimit = 5 * 1024 * 1024 * 1024;  // 5 GB por juego: cabe cualquier disco
+
+/* PS1: el núcleo arranca con mando digital, así que los sticks no irían a ningún sitio.
+   Le pedimos DualShock en los dos puertos (si el nombre de la opción no le suena, lo ignora). */
+if (sys === 'psx') {
+  window.EJS_defaultOptions = Object.assign({}, window.EJS_defaultOptions || {}, {
+    pcsx_rearmed_pad1type: 'analog',
+    pcsx_rearmed_pad2type: 'analog'
+  });
+}
+</script>
+<script>
+(async () => {
+  if (typeof sys !== 'undefined' && sys === 'psx') {
+    try {
+      const r = await fetch('/roms/PSX/scph1001.bin', { method: 'HEAD' });
+      if (r.ok) {
+        window.EJS_biosUrl = '/roms/PSX/scph1001.bin';
+        console.log('[sala200] BIOS de PS1 encontrada, usándola');
+      } else {
+        console.log('[sala200] sin BIOS de PS1: el núcleo usará la interna (algún juego puede fallar)');
+      }
+    } catch (e) {}
+  }
+  const sc = document.createElement('script');
+  sc.src = 'ejs/loader.js';
+  document.body.appendChild(sc);
+})();
+</script>
+</body>
+</html>
