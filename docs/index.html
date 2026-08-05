@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SALA 200 — Self-hosted retro arcade with real browser netplay</title>
+<meta name="description" content="Open-source self-hosted retro arcade: play SNES, Mega Drive, Neo Geo, arcade and N64 in the browser with true 2-player online netplay (P2P WebRTC lockstep), running on a Raspberry Pi.">
+<meta name="keywords" content="self-hosted arcade, emulatorjs netplay, browser emulator multiplayer, retro gaming server, raspberry pi arcade, webrtc netplay, romm alternative, fightcade web, selfhosted emulation">
+<link rel="canonical" href="https://ijuanlux.github.io/sala200/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SALA 200 — Self-hosted retro arcade with real browser netplay">
+<meta property="og:description" content="SNES, Mega Drive, Neo Geo, arcade and N64 in your browser, with 2-player online netplay that connects players directly. Self-hosted on a Raspberry Pi.">
+<meta property="og:url" content="https://ijuanlux.github.io/sala200/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root { --bg:#030503; --fg:#d8ffe8; --ph:#39ff88; --cy:#35e9ff; --dim:#1a3324; --oro:#ffd23f; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--fg); line-height:1.75;
+    font-family: ui-monospace,'SF Mono',Menlo,monospace;
+    background-image: radial-gradient(ellipse at 50% -10%, rgba(57,255,136,.10), transparent 60%); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 8vh 6vw 12vh; }
+  h1 { font-size: clamp(30px,7vw,58px); letter-spacing:.04em; line-height:1.1; }
+  h1 span { color:var(--ph); text-shadow:0 0 30px rgba(57,255,136,.5); }
+  .tag { color:var(--cy); letter-spacing:.28em; font-size:11px; margin-bottom:18px; }
+  .sub { font-size:clamp(15px,2.2vw,19px); color:#9fd8bd; margin:22px 0 34px; }
+  h2 { font-size:20px; color:var(--oro); margin:44px 0 14px; letter-spacing:.06em; }
+  p, li { font-size:15px; color:#bfe8d2; }
+  ul { margin:0 0 0 20px; }
+  li { margin-bottom:9px; }
+  b { color:var(--fg); }
+  a { color:var(--cy); }
+  .cta { display:inline-block; margin:34px 0 6px; border:2px solid var(--ph); color:var(--ph);
+    padding:16px 22px; text-decoration:none; letter-spacing:.1em; font-size:14px; }
+  .cta:hover { background:var(--ph); color:#001a0c; }
+  .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; margin-top:16px; }
+  .card { border:1px solid var(--dim); border-left:3px solid var(--ph); padding:16px 18px; }
+  .card b { display:block; margin-bottom:6px; color:var(--oro); }
+  .nota { border:1px dashed var(--dim); padding:14px 16px; margin-top:34px; font-size:13.5px; color:#6fa585; }
+  footer { margin-top:56px; font-size:12px; color:#3d5c49; }
+  .es { border-top:1px solid var(--dim); margin-top:56px; padding-top:34px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tag">— OPEN SOURCE · SELF-HOSTED —</div>
+  <h1>SALA <span>200</span></h1>
+  <p class="sub">A retro arcade you host yourself: SNES, Mega Drive, Neo Geo, arcade,
+  N64 and NES in the browser — with <b>real 2-player online netplay</b> that connects
+  players directly to each other, not through your server.</p>
+
+  <a class="cta" href="https://github.com/ijuanlux/sala200">▶ SOURCE ON GITHUB</a>
+
+  <h2>Why it is different</h2>
+  <div class="cols">
+    <div class="card"><b>Netplay that works</b>EmulatorJS ships an unfinished
+      synchroniser; this replaces it with a deterministic lockstep and a
+      <b>WebRTC channel between players</b>, so latency does not depend on where
+      your server lives.</div>
+    <div class="card"><b>It scales</b>Matches never touch the host machine, so a
+      Raspberry Pi can serve a whole club. Add members, not hardware.</div>
+    <div class="card"><b>A club, not a launcher</b>Invites, member cards, levels,
+      medals, duels, a ranking podium, chat with mentions and a spectator mode.</div>
+    <div class="card"><b>Arcade that heals itself</b>Tries several libretro cores
+      per ROM until one boots, then remembers it for everybody.</div>
+  </div>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>A Raspberry Pi 4 (or any small Linux box) with nginx, Node.js and Python</li>
+    <li>Your own game files — <b>this project ships none</b></li>
+    <li>Optional: Tailscale Funnel to reach it from outside, no open ports</li>
+  </ul>
+
+  <h2>Features</h2>
+  <ul>
+    <li><b>P2P netplay</b> (WebRTC lockstep) with adaptive delay, input batching,
+        desync detection, polite pause when your rival steps away and auto-rejoin</li>
+    <li><b>Spectator mode</b>: a third member watches the live match</li>
+    <li><b>Couch mode</b>: navigate the whole site with a gamepad</li>
+    <li>Profiles with unlockable avatars, war cries, levels, medals and cross-confirmed duels</li>
+    <li>Invitation-based registration (5 per member), chat with @mentions and a news feed</li>
+    <li>Mobile-first UI: side drawer, compact bar, touch pads per system</li>
+  </ul>
+
+  <div class="nota">⚠️ SALA 200 contains no games, ROMs or BIOS files, and does not
+  link to any. Use dumps of cartridges you own. The emulation cores come from
+  <a href="https://emulatorjs.org">EmulatorJS</a> (GPL-3.0).</div>
+
+  <div class="es">
+    <h2>En español</h2>
+    <p>SALA 200 es un <b>salón recreativo clandestino autoalojado</b>: montas el
+    servidor en tu Raspberry Pi, tus colegas entran por invitación y jugáis a
+    dobles por internet con conexión directa entre jugadores. Lleva moneda de
+    25 pesetas para el INSERT COIN, frases de pique con voz, ranking con podio,
+    medallas, palco para espectadores y navegación completa con mando.</p>
+    <p>El código, el montaje paso a paso y los detalles del netplay están en
+    <a href="https://github.com/ijuanlux/sala200">el repositorio</a>.</p>
+  </div>
+
+  <footer>GPL-3.0 · Built on EmulatorJS · No ROMs included</footer>
+</div>
+</body>
+</html>

@@ -1,5 +1,17 @@
 # SALA 200 🕹
 
+**Self-hosted retro arcade with real browser netplay.** Play SNES, Mega Drive,
+Neo Geo, arcade, N64 and NES in your browser, and run true 2-player online
+matches where players connect **directly to each other** (WebRTC lockstep), not
+through your server — so it scales to a whole club on a single Raspberry Pi.
+Invitation-only membership, profiles with medals, spectator mode, gamepad
+navigation and a 25-peseta coin for the INSERT COIN.
+[Project page](https://ijuanlux.github.io/sala200/) · *(Spanish below)*
+
+> No ROMs, no BIOS, no links to them. Bring dumps of the cartridges you own.
+
+---
+
 Tu salón recreativo clandestino, montado en una Raspberry Pi. Emulación en el
 navegador (SNES, Mega Drive, Neo Geo, arcade FBNeo, N64, PS1, Game Boy…),
 **2 jugadores por internet** con netcode lockstep propio, perfiles con niveles
