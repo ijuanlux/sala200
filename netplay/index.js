@@ -197,6 +197,24 @@ function makeServer(port, startIO) {
             }
             res.end(JSON.stringify(rv));
         })
+        // Barrido de salas fantasma: si el socket del anfitrión ya no existe, la
+        // sala no debe seguir apareciendo en la lista (la gente se metía en ella
+        // y se quedaba esperando a alguien que se fue hace rato).
+        setInterval(() => {
+            try {
+                if (!global.io) return;
+                for (let i = global.rooms.length - 1; i >= 0; i--) {
+                    const r = global.rooms[i];
+                    if (!r.ownerSid) continue;
+                    if (!global.io.sockets.sockets.get(r.ownerSid)) {
+                        console.log('sala fantasma barrida:', r.name);
+                        global.io.to(r.id + ':palco').emit('palco-fin');
+                        global.rooms.splice(i, 1);
+                    }
+                }
+            } catch (e) {}
+        }, 15000);
+
         const io = new Server(server, {
             cors: {
                 origin: "*",
@@ -209,6 +227,7 @@ function makeServer(port, startIO) {
             // un salto al wasap no debe matar el socket: 2 min de margen sin pong
             pingTimeout: 120000
         });
+        global.io = io;
         io.on('connection', (socket) => {
             nofusers = io.engine.clientsCount;
             let url = socket.handshake.url;
@@ -234,12 +253,12 @@ function makeServer(port, startIO) {
                     io.to(room.id).emit('user-disconnected', miId);
                     setTimeout(() => { try { avisarJugadores(io, room); } catch (e) {} }, 50);
                     for (let i=0; i<room.users.length; i++) {
-                        if (room.users[i].userid === miId) {
+                        if (room.users[i].sid === socket.id || room.users[i].userid === miId) {
                             room.users.splice(i, 1);
                             break;
                         }
                     }
-                    if (!room.users[0]) {
+                    if (!room.users[0] || room.ownerSid === socket.id) {
                         for (let i=0; i<global.rooms.length; i++) {
                             if (global.rooms[i].id === room.id) {
                                 global.rooms.splice(i, 1);
@@ -249,6 +268,7 @@ function makeServer(port, startIO) {
                         // Si se va el anfitrion la sala muere con el: el traspaso de dueño
                         // dejaba salas zombi (el cliente ni se entera de que ahora es dueño).
                         console.log('el anfitrion se fue: cerrando la sala', room.name);
+                        io.to(room.id + ':palco').emit('palco-fin');
                         for (let i=0; i<global.rooms.length; i++) {
                             if (global.rooms[i].id === room.id) {
                                 global.rooms.splice(i, 1);
@@ -282,6 +302,7 @@ function makeServer(port, startIO) {
                 room = new Room(data.extra.domain, data.extra.game_id, ses, data.extra.room_name, maxi, 1, (data.password || '').trim(), uid, socket, data.extra, cver);
                 console.log('sala abierta:', data.extra.room_name, 'de', data.extra.player_name, '| id', ses,
                             '| domain', room.domain, '| game_id', room.game_id);
+                room.ownerSid = socket.id;          // identidad que nunca falla
                 global.rooms.push(room);
                 extraData = data.extra;
 
@@ -340,6 +361,7 @@ function makeServer(port, startIO) {
                 })
 
                 room.addUser({
+                    sid: socket.id,
                     userid: miId,
                     socket,
                     extra: data.extra
@@ -359,10 +381,30 @@ function makeServer(port, startIO) {
             socket.on('data-message', function(msg) {
                 if (room === null) return;
                 socket.to(room.id).emit('data-message', msg);
+                // copia para el palco, con el remitente etiquetado (own = anfitrion)
+                io.to(room.id + ':palco').emit('palco-msg', {
+                    own: !!(room.owner && room.owner.extra &&
+                            room.owner.extra.player_name === (extraData && extraData.player_name)),
+                    m: msg
+                });
                 if (++nJugadas <= 3 || nJugadas % 200 === 0)
                     console.log('jugada retransmitida #' + nJugadas + ' de ' + (extraData.player_name || '?') +
                                 ' [' + Object.keys(msg || {}).join(',') + ']');
             })
+
+            // ---- palco: espectadores que ven la partida sin jugar ----
+            socket.on('espiar', function(ses, cb) {
+                const r = global.rooms.find(x => x.sessionid === ses);
+                if (!r) { if (typeof cb === 'function') cb(false); return; }
+                socket.join(r.id + ':palco');
+                socket._palco = r.id;
+                console.log('espectador en el palco de', r.name);
+                if (typeof cb === 'function') cb(true);
+            });
+            socket.on('palco-resync', function() {
+                // el espectador necesita un savestate: pide una sincronizacion a la sala
+                if (socket._palco) io.to(socket._palco).emit('data-message', { s2: 'resync' });
+            });
 
             socket.on('set-password', function(password, cb) {
                 if (room === null) {

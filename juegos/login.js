@@ -138,14 +138,14 @@ function beep(freqs, dur, type, vol) {
 
 /* ---------- secuencia de arranque ---------- */
 const LINES = LANG === 'en' ? [
-  ['SALA200 BIOS v8.0 — 192.168.1.200', 'ok'],
+  ['SALA200 BIOS v8.0', 'ok'],
   ['detecting hardware ................. <b class="ok">OK</b>', ''],
   ['mounting library from NAS ......... <b class="ok">1120 ROMS</b>', ''],
   ['loading emulators .................. <b class="ok">9 CORES</b>', ''],
   ['encrypted link ..................... <b class="ok">ESTABLISHED</b>', ''],
   ['checking credentials ............... <b class="warn">ACCESS REQUIRED</b>', ''],
 ] : [
-  ['SALA200 BIOS v8.0 — 192.168.1.200', 'ok'],
+  ['SALA200 BIOS v8.0', 'ok'],
   ['detectando hardware ................ <b class="ok">OK</b>', ''],
   ['montando biblioteca desde NAS ...... <b class="ok">1120 ROMS</b>', ''],
   ['cargando emuladores ................ <b class="ok">9 NÚCLEOS</b>', ''],
@@ -279,7 +279,11 @@ function ok() {
   warp.style.transition = 'opacity .55s .12s';
   warp.style.opacity = '1';
   setTimeout(() => {
-    const dest = param('r') || 'index.html';
+    /* r llega SIN codificar desde nginx: si la URL de destino llevaba sus
+       propios parámetros (rom, core...), un param('r') normal se queda solo
+       con el primer trozo. Nos quedamos con TODO lo que sigue a "r=". */
+    const m = location.search.match(/[?&]r=(.+)$/);
+    const dest = m ? m[1] : 'index.html';
     location.replace(dest.startsWith('/') || dest.startsWith('index') ? dest : 'index.html');
   }, 780);
 }

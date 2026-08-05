@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#030503">
 <link rel="manifest" href="manifest.json">
 <title>SALA 200</title>
-<link rel="stylesheet" href="style.css?v=33" />
+<link rel="stylesheet" href="style.css?v=57" />
 <script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
 </head>
 <body>
@@ -23,7 +23,7 @@
       <div class="pre-coin" data-i18n="coin">INSERT COIN</div>
       <div class="pre-count"><span class="count">0</span>%</div>
       <div class="pre-click blink" id="preClick" data-i18n="click" style="visibility:hidden">▶ CLIC PARA METER LA MONEDA ◀</div>
-      <div class="pre-boot" data-i18n="boot">SALA 200 BIOS v8 · 192.168.1.200</div>
+      <div class="pre-boot" data-i18n="boot">SALA 200 BIOS v8</div>
     </div>
   </div>
   <div id="crt-flash"></div>
@@ -49,12 +49,16 @@
 
     <section class="library" id="library">
       <div class="lib-bar">
+        <button id="hamBtn" aria-label="menú">☰</button>
+        <button id="lupaBtn" aria-label="buscar">🔍</button>
         <input type="text" id="q" placeholder="BUSCAR JUEGO_" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" inputmode="search">
         <button id="clearQ" class="tab magnetic" style="display:none">✕</button>
-        <button id="randomBtn" class="tab rnd magnetic" data-i18n="random">🎲 AL AZAR</button>
         <button id="pfBtn2" class="pf-btn magnetic">PERFIL</button>
+        <button id="rkBtn" class="pf-btn magnetic">🏆<span class="cht"> RANKING</span></button>
         <button id="langBtn2" class="pf-btn magnetic">🌐 ES</button>
-        <button id="chatBtn" class="pf-btn magnetic" style="display:none">💬 CHAT</button>
+        <button id="chatBtn" class="pf-btn magnetic" style="display:none">💬<span class="cht"> CHAT</span></button>
+        <button id="novBtn" class="pf-btn magnetic">🔔</button>
+        <button id="musBtn" class="pf-btn magnetic" aria-label="música">♪</button>
       </div>
       <div id="onlineBar"></div>
       <div class="count-line"><span id="count"></span></div>
@@ -64,11 +68,21 @@
 
   <footer class="marquee"><span id="mq"></span></footer>
 
+  <div id="drawerFondo"></div>
+  <aside id="drawer" data-lenis-prevent>
+    <div class="dw-tit">SALA <span>200</span></div>
+    <div id="dwAcciones"></div>
+    <div id="dwAjustes"></div>
+    <div class="dw-sec" data-i18n="sistemas">SISTEMAS</div>
+    <div id="dwTabs"></div>
+    <div id="dwPie"></div>
+  </aside>
+
   <script src="lib/gsap.min.js"></script>
   <script src="lib/ScrollTrigger.min.js"></script>
   <script src="lib/lenis.min.js"></script>
-  <script src="main.js?v=27"></script>
-  <script src="perfil.js?v=12"></script>
-  <script type="module" src="scene.js?v=23"></script>
+  <script src="main.js?v=51"></script>
+  <script src="perfil.js?v=24"></script>
+  <script type="module" src="scene.js?v=24"></script>
 </body>
 </html>

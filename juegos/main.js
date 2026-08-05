@@ -5,8 +5,16 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ================= idiomas ================= */
 const STR = {
   es: {
-    coin: 'INSERT COIN', click: '▶ CLIC PARA METER LA MONEDA ◀', boot: 'SALA 200 BIOS v8 · 192.168.1.200',
+    coin: 'INSERT COIN', click: '▶ CLIC PARA METER LA MONEDA ◀', boot: 'SALA 200 BIOS v8',
     search: 'BUSCAR JUEGO_', all: 'TODO', fav: '★ FAVORITOS', recent: 'RECIENTES', random: '🎲 AL AZAR',
+    nuevos: '✨ NOVEDADES',
+    ajustes: 'AJUSTES', si: 'SÍ', no: 'NO',
+    aAuto: '🔁 Autoguardado', aAutoS: 'seguir donde lo dejaste',
+    aSuave: '🖼 Suavizado', aSuaveS: 'imagen suave o pixelada',
+    aFuego: '🔥 Hadouken', aFuegoS: 'llamas al cuarto de círculo',
+    aDesp: '☀️ No bloquear', aDespS: 'que el móvil no se duerma',
+    aMus: '♪ Música', aMusS: 'la sintonía de la sala',
+    aSalir: '🚪 CERRAR SESIÓN',
     scroll: '▼ O BAJA A LA SALA ▼',
     hintMove: 'WASD MOVER · ESPACIO SALTAR (x2) · Q BAILAR · F GOLPEAR · MAYÚS CORRER · ENTER ENTRAR',
     hintPad: 'MANDO: STICK MOVER · ✕ SALTAR · △ BAILAR · ▢ GOLPEAR · L1 CORRER · ○ ENTRAR',
@@ -20,8 +28,16 @@ const STR = {
     back: '◄ SALA 200', hint: 'MANDO AL MAC · F = PANTALLA COMPLETA',
   },
   en: {
-    coin: 'INSERT COIN', click: '▶ CLICK TO INSERT COIN ◀', boot: 'SALA 200 BIOS v8 · 192.168.1.200',
+    coin: 'INSERT COIN', click: '▶ CLICK TO INSERT COIN ◀', boot: 'SALA 200 BIOS v8',
     search: 'SEARCH GAME_', all: 'ALL', fav: '★ FAVOURITES', recent: 'RECENT', random: '🎲 RANDOM',
+    nuevos: '✨ NEW ARRIVALS',
+    ajustes: 'SETTINGS', si: 'YES', no: 'NO',
+    aAuto: '🔁 Autosave', aAutoS: 'resume where you left off',
+    aSuave: '🖼 Smoothing', aSuaveS: 'smooth or pixelated image',
+    aFuego: '🔥 Hadouken', aFuegoS: 'quarter-circle flames',
+    aDesp: '☀️ Keep awake', aDespS: "don't let the phone sleep",
+    aMus: '♪ Music', aMusS: 'the arcade tune',
+    aSalir: '🚪 LOG OUT',
     scroll: '▼ OR SCROLL TO THE FLOOR ▼',
     hintMove: 'WASD MOVE · SPACE JUMP (x2) · Q DANCE · F PUNCH · SHIFT RUN · ENTER GO IN',
     hintPad: 'PAD: STICK MOVE · ✕ JUMP · △ DANCE · ▢ PUNCH · L1 RUN · ○ ENTER',
@@ -56,6 +72,7 @@ function applyLang() {
 
 /* ================= Lenis ================= */
 const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+window.SALA_LENIS = lenis;   // el perfil lo congela mientras está abierto (la rueda era suya)
 lenis.on('scroll', ScrollTrigger.update);
 gsap.ticker.add((t) => lenis.raf(t * 1000));
 gsap.ticker.lagSmoothing(0);
@@ -148,6 +165,7 @@ document.querySelectorAll('.magnetic').forEach(el => {
 
 /* ================= audio ================= */
 let AC = null, master = null, musicOn = true;
+try { musicOn = localStorage.getItem('sala_music') !== '0'; } catch (e) {}
 function coinBlip() {
   const t = AC.currentTime;
   const o = AC.createOscillator(), g = AC.createGain();
@@ -220,6 +238,7 @@ addEventListener('sala:sfx', e => {
   else if (e.detail === 'fav') blip([880, 1320, 1760], .2, 'triangle', .06);
   else if (e.detail === 'logro') blip([784, 988, 1175, 1568], .6, 'square', .07);
   else if (e.detail === 'chat') blip([1046, 1318], .14, 'triangle', .05);
+  else if (e.detail === 'mencion') blip([880, 1174, 1568, 2093], .38, 'triangle', .08);
   else if (e.detail === 'jump') blip([620, 900], .12, 'square', .045);
   else if (e.detail === 'jump2') blip([900, 1300], .12, 'square', .045);
   else if (e.detail === 'land') blip([180, 120], .1, 'triangle', .05);
@@ -227,11 +246,23 @@ addEventListener('sala:sfx', e => {
   else if (e.detail === 'punch') blip([300, 140], .12, 'sawtooth', .05);
 });
 const muteBtn = document.getElementById('mute');
-muteBtn.addEventListener('click', () => {
+const musBtn = document.getElementById('musBtn');
+function pintarMusica() {
+  if (muteBtn) muteBtn.textContent = musicOn ? '♪ ON' : '♪ OFF';
+  if (musBtn) {
+    musBtn.textContent = musicOn ? '♪' : '🔇';
+    musBtn.classList.toggle('off', !musicOn);
+    musBtn.title = musicOn ? 'música: encendida' : 'música: apagada';
+  }
+}
+function alternarMusica() {
   musicOn = !musicOn;
+  try { localStorage.setItem('sala_music', musicOn ? '1' : '0'); } catch (e) {}
   if (master) gsap.to(master.gain, { value: musicOn ? .11 : 0, duration: .4 });
-  muteBtn.textContent = musicOn ? '♪ ON' : '♪ OFF';
-});
+  pintarMusica();
+}
+[muteBtn, musBtn].forEach(b => { if (b) b.addEventListener('click', alternarMusica); });
+pintarMusica();
 
 /* ================= preloader ================= */
 const pre = document.getElementById('preloader');
@@ -271,6 +302,16 @@ function toggleFav(g) {
   dispatchEvent(new CustomEvent('sala:sfx', { detail: 'fav' }));
   rebuildTabs(); render();
 }
+/* un juego recomendado por un socio entra directo en tus favoritos */
+window.SALA_FAV_ADD = (sysN, path) => {
+  const k = `${sysN}|${path}`;
+  if (FAVS.includes(k)) return false;
+  FAVS.push(k);
+  localStorage.setItem('sala_favs', JSON.stringify(FAVS));
+  if (window.SALA_PROFILE) window.SALA_PROFILE.evento({ tipo: 'favs', n: FAVS.length });
+  rebuildTabs(); render();
+  return true;
+};
 window.SALA_PLAYED = (g) => {
   const k = KEY(g);
   RECENT = [k, ...RECENT.filter(x => x !== k)].slice(0, 24);
@@ -324,15 +365,22 @@ let GAMES = [], sys = 'all';
 const grid = document.getElementById('grid'), q = document.getElementById('q'), countEl = document.getElementById('count');
 const SYS_LABEL = { snes: 'SNES', megadrive: 'MEGA DRIVE', neogeo: 'NEO GEO', arcade: 'ARCADE', nes: 'NES', gb: 'GAME BOY', gba: 'GBA', psx: 'PS1', n64: 'N64', sms: 'MASTER SYSTEM', gg: 'GAME GEAR' };
 
-fetch('games.json').then(r => r.json()).then(d => {
+/* el catálogo cambia cada vez que entran juegos nuevos: nada de caché vieja
+   (a Juan le faltaban 2000 arcade porque el navegador guardaba la lista antigua) */
+fetch('games.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   GAMES = d; window.SALA_GAMES = d;
   dispatchEvent(new Event('sala:games'));
   rebuildTabs(); render(); buildMarquee(d.length);
 });
 
+function destinoTabs() {
+  const d = document.getElementById('dwTabs');
+  return ((innerWidth <= 820 || matchMedia('(pointer: coarse)').matches) && d)
+    ? d : document.querySelector('.lib-bar');
+}
 function rebuildTabs() {
-  const bar = document.querySelector('.lib-bar');
-  bar.querySelectorAll('.tab[data-sys]').forEach(b => b.remove());
+  document.querySelectorAll('.tab[data-sys]').forEach(b => b.remove());
+  const bar = destinoTabs();
   const mk = (key, label) => {
     const b = document.createElement('button');
     b.className = 'tab magnetic' + (sys === key ? ' on' : '');
@@ -343,6 +391,14 @@ function rebuildTabs() {
   mk('all', STR[LANG].all);
   if (FAVS.length) mk('__fav', STR[LANG].fav);
   if (RECENT.length) mk('__recent', STR[LANG].recent);
+  // lo recién llegado al catálogo (últimos 14 días) tiene su propia estantería
+  if ((window.SALA_GAMES || []).some(g => g.ts && (Date.now() / 1000 - g.ts) < 14 * 86400))
+    mk('__new', STR[LANG].nuevos);
+  /* la chapita NEW, solo en la estantería que acaba de estrenarse de verdad
+     (todo el catálogo tiene fecha de fichero reciente y salían falsos NEW) */
+  setTimeout(() => document.querySelectorAll('.tab[data-sys]').forEach(b => {
+    b.classList.toggle('nuevo-sys', b.dataset.sys === 'arcade');
+  }), 0);
   [...new Set(GAMES.map(g => g.sys))].forEach(sn => mk(sn, SYS_LABEL[sn] || sn.toUpperCase()));
   bindCursor(bar);
 }
@@ -352,20 +408,26 @@ function currentList() {
   let list;
   if (sys === '__fav') list = FAVS.map(k => GAMES.find(g => KEY(g) === k)).filter(Boolean);
   else if (sys === '__recent') list = RECENT.map(k => GAMES.find(g => KEY(g) === k)).filter(Boolean);
+  else if (sys === '__new') list = GAMES.filter(g => g.ts && (Date.now() / 1000 - g.ts) < 14 * 86400)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
   else list = GAMES.filter(g => sys === 'all' || g.sys === sys);
   return list.filter(g => g.name.toLowerCase().includes(t));
 }
 
 /* pintado por tandas: en móvil el DOM se satura si metemos 600 tarjetas de golpe */
-const MOBILE = matchMedia('(max-width: 820px)').matches;
+/* "móvil" = pantalla pequeña O táctil: un teléfono en horizontal pasa de 820px
+   y se colaba por la puerta del escritorio (cajón y navegación por mando KO) */
+const ES_TACTIL = matchMedia('(pointer: coarse)').matches;
+const MOBILE = matchMedia('(max-width: 820px)').matches || ES_TACTIL;
 const PAGE = MOBILE ? 40 : 120;
 let shownList = [], shownCount = 0, sentinel = null, io = null;
 
 function cardHTML(g) {
   const k = KEY(g);
-  return `<a class="game" data-k="${k}" href="player.html?sys=${g.sys}&rom=${encodeURIComponent(g.path)}&name=${encodeURIComponent(g.name)}">` +
+  return `<a class="game" data-k="${k}" data-href="player.html?sys=${g.sys}&rom=${encodeURIComponent(g.path)}&name=${encodeURIComponent(g.name)}">` +
     `<span class="box">${(g.mini || g.thumb) ? `<img loading="lazy" decoding="async" width="320" height="440" src="${encodeURI(g.mini || g.thumb)}" alt="">` : '👾'}</span>` +
     `<button class="fav${FAVS.includes(k) ? ' on' : ''}" title="fav">★</button>` +
+    `<button class="regalo" title="recomendar a un socio">🎁</button>` +
     `${g.name}<span class="sys">${g.sys.toUpperCase()}</span></a>`;
 }
 
@@ -374,7 +436,12 @@ function wire(nodes) {
     const g = GAMES.find(x => KEY(x) === a.dataset.k);
     if (!g) return;
     a.querySelector('.fav').addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); toggleFav(g); });
-    a.addEventListener('click', () => window.SALA_PLAYED(g));
+    a.querySelector('.regalo').addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      if (window.SALA_REGALO) window.SALA_REGALO(g);
+    });
+    // sin href real: así el navegador no enseña la URL abajo al pasar por encima
+    a.addEventListener('click', () => { window.SALA_PLAYED(g); location.href = a.dataset.href; });
   });
   if (!MOBILE) bindCursor(grid);
 }
@@ -426,7 +493,8 @@ document.getElementById('clearQ').addEventListener('click', () => {
 q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); q.blur(); } });
 
 /* botón al azar */
-document.getElementById('randomBtn').addEventListener('click', () => {
+const _rndBtn = document.getElementById('randomBtn');
+if (_rndBtn) _rndBtn.addEventListener('click', () => {
   const list = currentList().length ? currentList() : GAMES;
   if (!list.length) return;
   const g = list[Math.floor(Math.random() * list.length)];
@@ -434,6 +502,132 @@ document.getElementById('randomBtn').addEventListener('click', () => {
   blip([523, 784, 1046], .3, 'square', .06);
   setTimeout(() => location.href = `player.html?sys=${g.sys}&rom=${encodeURIComponent(g.path)}&name=${encodeURIComponent(g.name)}`, 220);
 });
+
+/* ================= cajón lateral (móvil) =================
+   Sustituye a la pestaña plegable: el buscador queda SIEMPRE a la vista en la
+   barra, y todo lo demás (sistemas, perfil, ranking, idioma...) vive en un
+   cajón que entra desde la izquierda. En escritorio no cambia nada. */
+(function cajon() {
+  const ham = document.getElementById('hamBtn');
+  const dw = document.getElementById('drawer');
+  const fondo = document.getElementById('drawerFondo');
+  if (!ham || !dw || !fondo) return;
+  const abrirDw = (v) => { dw.classList.toggle('on', v); fondo.classList.toggle('on', v); };
+  ham.addEventListener('click', () => abrirDw(!dw.classList.contains('on')));
+  fondo.addEventListener('click', () => abrirDw(false));
+  // elegir algo dentro cierra el cajón (dejando respirar a la animación)
+  dw.addEventListener('click', (e) => {
+    // los ajustes se quedan abiertos: solo cierran las acciones de navegar
+    if (e.target.closest('#dwAjustes, .dw-cab, #dwPie')) return;
+    if (e.target.closest('button, a')) setTimeout(() => abrirDw(false), 160);
+  });
+  // gesto: deslizar desde el borde izquierdo abre
+  let borde = null;
+  addEventListener('touchstart', (e) => {
+    borde = (e.touches[0].clientX < 26 && !dw.classList.contains('on')) ? e.touches[0].clientX : null;
+  }, { passive: true });
+  addEventListener('touchmove', (e) => {
+    if (borde !== null && e.touches[0].clientX - borde > 45) { abrirDw(true); borde = null; }
+  }, { passive: true });
+
+  function recolocar() {
+    const movil = innerWidth <= 820 || matchMedia('(pointer: coarse)').matches;
+    const acc = document.getElementById('dwAcciones');
+    const barra = document.querySelector('.lib-bar');
+    // arriba viven chat, ranking e idioma; al cajón solo va el perfil
+    ['pfBtn2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) (movil ? acc : barra).appendChild(el);
+    });
+    // en móvil la cabecera nunca queda plegada (la lengüeta desaparece)
+    const st = document.getElementById('stickyTop');
+    if (movil && st) st.classList.remove('plegado');
+    rebuildTabs();
+  }
+  recolocar();
+  addEventListener('resize', () => { clearTimeout(window._dwr); window._dwr = setTimeout(recolocar, 250); });
+})();
+
+/* ---------- ajustes en el cajón: preconfiguran TODAS las partidas ----------
+   Escriben las mismas claves de localStorage que lee player.html, así que lo
+   que elijas aquí es como llega el emulador cuando abres un juego. */
+const SALA_VER = 'v1.4';
+const SALA_BUILD = '2026.08.05';
+const AJUSTES = [
+  { k: 'sala_autosave', t: 'aAuto', s: 'aAutoS', def: true },
+  { k: 'sala_suave',    t: 'aSuave', s: 'aSuaveS', def: false },
+  { k: 'sala_fuego',    t: 'aFuego', s: 'aFuegoS', def: true },
+  { k: 'sala_despierto', t: 'aDesp', s: 'aDespS', def: true },
+];
+let ajAbierto = false;
+try { ajAbierto = localStorage.getItem('sala_ajabierto') === '1'; } catch (e) {}
+const ajOn = (a) => {
+  try {
+    const v = localStorage.getItem(a.k);
+    if (v === null) return a.def;
+    return v === '1';
+  } catch (e) { return a.def; }
+};
+function pintarAjustes() {
+  const caja = document.getElementById('dwAjustes');
+  if (!caja) return;
+  const t = STR[LANG];
+  const pie = document.getElementById('dwPie');
+  if (pie) pie.innerHTML =
+    `<div class="dw-ver">SALA 200 · ${SALA_VER}<span>build ${SALA_BUILD}</span></div>` +
+    `<button class="dw-salir" data-salir="1">${t.aSalir}</button>`;
+  if (pie) pie.onclick = (e) => {
+    if (!e.target.closest('[data-salir]')) return;
+    document.cookie = 'sala200=; path=/; max-age=0';
+    try { localStorage.removeItem('sala_user'); } catch (err) {}
+    location.href = 'login.html';
+  };
+  caja.innerHTML =
+    `<button class="dw-cab${ajAbierto ? ' on' : ''}" data-plegar="1">${t.ajustes}
+      <i>${ajAbierto ? '▾' : '▸'}</i></button>` +
+    `<div class="dw-lista" ${ajAbierto ? '' : 'hidden'}>` +
+    AJUSTES.map((a, i) =>
+      `<button class="dw-aj" data-i="${i}"><span>${t[a.t]}<em>${t[a.s]}</em></span>
+        <b class="${ajOn(a) ? 'si' : 'no'}">${ajOn(a) ? t.si : t.no}</b></button>`).join('') +
+    `<button class="dw-aj" data-mus="1"><span>${t.aMus}<em>${t.aMusS}</em></span>
+      <b class="${musicOn ? 'si' : 'no'}">${musicOn ? t.si : t.no}</b></button></div>`;
+  caja.onclick = (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.plegar) {
+      ajAbierto = !ajAbierto;
+      try { localStorage.setItem('sala_ajabierto', ajAbierto ? '1' : '0'); } catch (err) {}
+      pintarAjustes();
+      return;
+    }
+    if (b.dataset.mus) { alternarMusica(); pintarAjustes(); return; }
+    const a = AJUSTES[+b.dataset.i];
+    if (!a) return;
+    try { localStorage.setItem(a.k, ajOn(a) ? '0' : '1'); } catch (err) {}
+    pintarAjustes();
+    blip([880, 1174], .1, 'triangle', .04);
+  };
+}
+addEventListener('sala:lang', pintarAjustes);
+pintarAjustes();          // ojo: aquí, después de definirse (el cajón corre antes)
+
+/* ---------- la lupa: en móvil el buscador vive plegado ---------- */
+(function lupa() {
+  const b = document.getElementById('lupaBtn');
+  const q = document.getElementById('q');
+  const bar = document.querySelector('.lib-bar');
+  if (!b || !q || !bar) return;
+  b.addEventListener('click', () => {
+    const abre = !bar.classList.contains('buscando');
+    bar.classList.toggle('buscando', abre);
+    if (abre) setTimeout(() => q.focus(), 140);
+    else q.blur();
+  });
+  // al salir del campo sin texto, se repliega solo
+  q.addEventListener('blur', () => {
+    if (!q.value.trim()) setTimeout(() => bar.classList.remove('buscando'), 150);
+  });
+})();
 
 /* idioma: el botón del lobby 3D y el de la barra de la biblioteca (el 3D no se ve en móvil) */
 function toggleLang() {
@@ -454,10 +648,24 @@ addEventListener('sala:door', (e) => {
   lenis.scrollTo('#library', { offset: -10, duration: 1.2 });
 });
 
-/* marquesina */
+/* marquesina viva: lo de siempre + el pulso real de la sala */
+let RKINFO = null;
 function buildMarquee(total) {
-  document.getElementById('mq').innerHTML = STR[LANG].marquee(total).repeat(6);
+  const extra = RKINFO
+    ? (LANG === 'en'
+        ? ` 👑 CHAMPION: <b>${RKINFO.campeon}</b> — ${RKINFO.plays} GAMES PLAYED — ${RKINFO.horas}H OF ARCADE —`
+        : ` 👑 CAMPEÓN: <b>${RKINFO.campeon}</b> — ${RKINFO.plays} PARTIDAS ECHADAS — ${RKINFO.horas}H DE VICIO —`)
+    : '';
+  document.getElementById('mq').innerHTML = (STR[LANG].marquee(total) + extra).repeat(4);
 }
+fetch('/api/ranking').then(r => r.json()).then(d => {
+  const l = d.ranking || [];
+  if (!l.length) return;
+  RKINFO = { campeon: l[0].user.toUpperCase(),
+             plays: l.reduce((a, x) => a + x.plays, 0),
+             horas: Math.round(l.reduce((a, x) => a + (x.minutos || 0), 0) / 60) };
+  if (window.SALA_GAMES) buildMarquee(window.SALA_GAMES.length);
+}).catch(() => {});
 
 /* ================= easter egg: código Konami → modo ámbar ================= */
 const KONAMI = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
@@ -499,6 +707,149 @@ function pollPad() {
   }
 }
 gsap.ticker.add(pollPad);
+
+/* ================= modo sofá: la biblioteca con el mando =================
+   Cruceta/stick para moverte por las carátulas, ✕ (A) para lanzar el juego,
+   L1/R1 para cambiar de estantería. Solo despierta si hay mando conectado. */
+let sofaPad = false, sofaSel = -1, sofaPrev = {}, sofaHold = {}, sofaCtx = '', sofaSelP = 0, sofaBarra = false;
+addEventListener('gamepadconnected', () => { sofaPad = true; });
+addEventListener('gamepaddisconnected', () => {
+  sofaPad = [...(navigator.getGamepads ? navigator.getGamepads() : [])].some(Boolean);
+});
+function sofaMarca(cards) {
+  cards.forEach((c, i) => c.classList.toggle('selec', i === sofaSel));
+  const el = cards[sofaSel];
+  if (!el) return;
+  try {
+    if (window.SALA_LENIS) window.SALA_LENIS.scrollTo(el, { offset: -innerHeight / 2 + 140, duration: .45 });
+    else el.scrollIntoView({ block: 'center' });
+  } catch (e) { el.scrollIntoView({ block: 'center' }); }
+}
+function sofaNav() {
+  if (!sofaPad) return;
+  const p = [...(navigator.getGamepads ? navigator.getGamepads() : [])]
+    .filter(Boolean).find(x => x.buttons && x.buttons.length >= 4);
+  if (!p) return;
+  // escribiendo en un campo, el mando no interfiere
+  if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+  const est = {
+    izq: (p.buttons[14] && p.buttons[14].pressed) || ax < -.6,
+    der: (p.buttons[15] && p.buttons[15].pressed) || ax > .6,
+    arr: (p.buttons[12] && p.buttons[12].pressed) || ay < -.6,
+    aba: (p.buttons[13] && p.buttons[13].pressed) || ay > .6,
+    a: p.buttons[0] && p.buttons[0].pressed,
+    b: p.buttons[1] && p.buttons[1].pressed,
+    tri: p.buttons[3] && p.buttons[3].pressed,
+    l1: p.buttons[4] && p.buttons[4].pressed,
+    r1: p.buttons[5] && p.buttons[5].pressed,
+  };
+  const t = performance.now();
+  // flanco + auto-repetición al mantener (350 ms de espera, luego cada 110 ms)
+  const pulso = (k) => {
+    if (!est[k]) { sofaPrev[k] = false; sofaHold[k] = 0; return false; }
+    if (!sofaPrev[k]) { sofaPrev[k] = true; sofaHold[k] = t + 350; return true; }
+    if (t > sofaHold[k]) { sofaHold[k] = t + 110; return true; }
+    return false;
+  };
+
+  // ---- contexto: ¿hay un panel o el cajón abiertos? La cruceta manda AHÍ ----
+  const PANELES = [
+    ['#pfWrap.on #pfPanel', '#pfClose'],
+    ['#rkWrap.on #rkPanel', '#rkClose'],
+    ['#chatWrap.on', '#chatX'],
+    ['#drawer.on', '#drawerFondo'],
+  ];
+  let ctx = null;
+  for (const [sel, cierre] of PANELES) {
+    const cont = document.querySelector(sel);
+    if (cont) { ctx = { cont, cierre, clave: sel }; break; }
+  }
+  if (ctx) {
+    const els = [...ctx.cont.querySelectorAll('button, a')].filter(e => e.offsetParent !== null);
+    if (!els.length) return;
+    const marca = () => {
+      els.forEach((e, i) => e.classList.toggle('padsel', i === sofaSelP));
+      try { els[sofaSelP].scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+    };
+    if (sofaCtx !== ctx.clave) { sofaCtx = ctx.clave; sofaSelP = 0; marca(); }
+    if (pulso('aba') || pulso('der')) { sofaSelP = Math.min(els.length - 1, sofaSelP + 1); marca(); }
+    if (pulso('arr') || pulso('izq')) { sofaSelP = Math.max(0, sofaSelP - 1); marca(); }
+    if (pulso('a') && els[sofaSelP]) els[sofaSelP].click();
+    if (pulso('b')) {
+      els.forEach(e => e.classList.remove('padsel'));
+      const x = document.querySelector(ctx.cierre);
+      if (x) x.click();
+      sofaCtx = '';
+    }
+    return;
+  }
+  sofaCtx = '';
+
+  // ---- sin paneles: la rejilla de juegos ----
+  if (pulso('b')) {                      // ○ abre el cajón
+    const h = document.getElementById('hamBtn');
+    if (h && h.offsetParent !== null) h.click();
+    return;
+  }
+  if (pulso('tri')) {                    // △ abre el chat
+    const c = document.getElementById('chatBtn');
+    if (c && c.offsetParent !== null) c.click();
+    return;
+  }
+  const cards = [...document.querySelectorAll('.grid a.game')];
+  if (!cards.length) return;
+
+  // ---- modo barra: los iconos de arriba (☰ 🔍 👥 💬 🏆 🌐 y pestañas) ----
+  if (sofaBarra) {
+    const bts = [...document.querySelectorAll('.lib-bar button, .lib-bar .tab')]
+      .filter(e => e.offsetParent !== null);
+    if (!bts.length) { sofaBarra = false; return; }
+    sofaSelP = Math.max(0, Math.min(bts.length - 1, sofaSelP));
+    const marcaB = () => {
+      bts.forEach((e, i) => e.classList.toggle('padsel', i === sofaSelP));
+    };
+    marcaB();
+    if (pulso('der')) { sofaSelP = Math.min(bts.length - 1, sofaSelP + 1); marcaB(); }
+    if (pulso('izq')) { sofaSelP = Math.max(0, sofaSelP - 1); marcaB(); }
+    if (pulso('a') && bts[sofaSelP]) { bts[sofaSelP].click(); }
+    if (pulso('aba') || pulso('b')) {           // bajar (o ○) devuelve a la rejilla
+      bts.forEach(e => e.classList.remove('padsel'));
+      sofaBarra = false;
+      sofaMarca(cards);
+    }
+    return;
+  }
+
+  // columnas reales de la rejilla (para que arriba/abajo salte la fila entera)
+  let cols = 1;
+  const y0 = cards[0].offsetTop;
+  while (cols < cards.length && cards[cols].offsetTop === y0) cols++;
+  const mueve = (d) => {
+    sofaSel = sofaSel < 0 ? 0 : Math.max(0, Math.min(cards.length - 1, sofaSel + d));
+    sofaMarca(cards);
+  };
+  if (pulso('izq')) mueve(-1);
+  if (pulso('der')) mueve(1);
+  if (pulso('arr')) {
+    if (sofaSel >= 0 && sofaSel < cols) {       // primera fila + arriba = a la barra
+      cards.forEach(e => e.classList.remove('selec'));
+      sofaBarra = true; sofaSelP = 0;
+      try { if (window.SALA_LENIS) window.SALA_LENIS.scrollTo(0, { duration: .3 }); } catch (e) {}
+      return;
+    }
+    mueve(-cols);
+  }
+  if (pulso('aba')) mueve(cols);
+  if (pulso('l1') || pulso('r1')) {
+    const tabs = [...document.querySelectorAll('.tab[data-sys]')];
+    const i = tabs.findIndex(x => x.classList.contains('on'));
+    const j = (i + (est.r1 ? 1 : -1) + tabs.length) % tabs.length;
+    if (tabs[j]) { tabs[j].click(); sofaSel = -1; }
+  }
+  if (pulso('a') && sofaSel >= 0 && cards[sofaSel]) cards[sofaSel].click();
+}
+gsap.ticker.add(sofaNav);
 
 /* indicador de mando conectado */
 const padInd = document.getElementById('padInd');

@@ -109,10 +109,25 @@ Tu recreativa queda en `https://<maquina>.<tailnet>.ts.net`, con HTTPS de
 verdad y sin abrir puertos en el router. El vigilante `sala200-funnel`
 reinicia el túnel si tu operadora te cambia la IP.
 
+## Lo que trae la v1.4
+
+- **Netplay directo (P2P)**: los botones viajan de un jugador a otro por WebRTC;
+  el servidor solo hace de casamentero. Escala sin límite y baja la latencia.
+- **Modo palco**: un tercero ve la partida en directo (mismo savestate, mismos
+  inputs) sin poder tocar.
+- **Arcade con auto-curación**: prueba varios núcleos hasta dar con el que
+  arranca cada ROM y lo recuerda para todos.
+- **Club**: invitaciones (5 por socio), fichas con avatar/frase/país, niveles,
+  medallas, duelos con confirmación cruzada, ranking con podio, chat con
+  @menciones y buzón de novedades.
+- **Modo sofá**: se navega toda la web con el mando; SELECT+START sale del juego.
+- Y la peseta de 25, el pitillo humeando y las frases de pique.
+
 ## El netplay, en dos líneas
 
 EmulatorJS trae un sincronizador experimental que no funciona; esta web lo
-sustituye por un **lockstep determinista** propio: el anfitrión manda un
+sustituye por un **lockstep determinista** propio, y desde la v1.4 los inputs
+viajan además por un canal WebRTC directo entre jugadores: el anfitrión manda un
 savestate (gzip) y a partir de ahí solo viajan botones, ejecutados en los
 mismos frames en ambos lados. Margen adaptativo según tu latencia, batching
 de mensajes, detección automática de desincronización por huella del estado,

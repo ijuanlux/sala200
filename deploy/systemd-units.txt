@@ -10,6 +10,22 @@ User=pi
 [Install]
 WantedBy=multi-user.target
 [Unit]
+Description=SALA 200 - copia nocturna al NAS
+[Service]
+Type=oneshot
+ExecStart=/opt/sala200/backup.sh
+[Unit]
+Description=Regenera catalogo y caratulas de SALA 200
+After=mnt-nasroms.automount
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "python3 /opt/sala200/genlist.py && python3 /opt/sala200/covers.py && python3 /opt/sala200/thumbs.py && python3 /opt/sala200/mini.py"
+[Unit]
+Description=SALA 200 - vigilante del tunel publico
+[Service]
+Type=oneshot
+ExecStart=/opt/sala200/funnel-guard.sh
+[Unit]
 Description=SALA 200 netplay (2 jugadores por red)
 After=network.target
 [Service]
@@ -23,11 +39,12 @@ User=pi
 [Install]
 WantedBy=multi-user.target
 [Unit]
-Description=Regenera catalogo y caratulas de SALA 200
-After=mnt-nasroms.automount
-[Service]
-Type=oneshot
-ExecStart=/bin/bash -c "python3 /opt/sala200/genlist.py && python3 /opt/sala200/covers.py && python3 /opt/sala200/thumbs.py && python3 /opt/sala200/mini.py"
+Description=SALA 200 - backup diario 05:30
+[Timer]
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+[Install]
+WantedBy=timers.target
 [Unit]
 Description=Catalogo SALA 200 cada 10 min
 [Timer]
@@ -35,11 +52,6 @@ OnBootSec=3min
 OnUnitActiveSec=10min
 [Install]
 WantedBy=timers.target
-[Unit]
-Description=SALA 200 - vigilante del tunel publico
-[Service]
-Type=oneshot
-ExecStart=/opt/sala200/funnel-guard.sh
 [Unit]
 Description=Comprueba el tunel de SALA 200 cada 3 minutos
 [Timer]

@@ -11,7 +11,7 @@ SOURCES = [
     ("snes", "SNES/SNES ROMS (Español) LeaxxDoga/Español", (".zip", ".smc", ".sfc")),
     ("megadrive", "MegaDrive", (".zip", ".md", ".bin", ".gen", ".smd")),
     ("neogeo", "NeoGeo", (".zip",)),
-    ("arcade", "Arcade", (".zip",)),
+    ("arcade", "Arcade", (".zip",), "/home/pi/roms"),
     ("nes", "NES", (".zip", ".nes")),
     ("gb", "GameBoy", (".zip", ".gb", ".gbc")),
     ("gba", "GBA", (".zip", ".gba")),
@@ -22,14 +22,17 @@ SOURCES = [
 ]
 
 games = []
-for sys_name, rel, exts in SOURCES:
-    d = os.path.join(BASE, rel)
+for fuente in SOURCES:
+    sys_name, rel, exts = fuente[0], fuente[1], fuente[2]
+    base = fuente[3] if len(fuente) > 3 else BASE
+    d = os.path.join(base, rel)
     if not os.path.isdir(d):
         continue
     for f in sorted(os.listdir(d)):
         if f.lower().endswith(exts) and not f.startswith(".") and os.path.splitext(f)[0].lower() not in ("neogeo", "neogeo_bios"):
             name = os.path.splitext(f)[0]
-            games.append({"sys": sys_name, "name": name, "path": os.path.join(rel, f)})
+            games.append({"sys": sys_name, "name": name, "path": os.path.join(rel, f),
+                          "ts": int(os.path.getmtime(os.path.join(d, f)))})
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w") as fh:

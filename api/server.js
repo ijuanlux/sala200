@@ -59,6 +59,10 @@ const LOGROS = [
   { id: 'red',        nombre: 'DOS JUGADORES',      desc: 'Tu primera partida en red',                 test: p => (p.netplay || 0) >= 1 },
   { id: 'red10',      nombre: 'RIVAL DIGNO',        desc: '10 partidas en red',                        test: p => (p.netplay || 0) >= 10 },
   { id: 'semana',     nombre: 'FIEL A LA SALA',     desc: 'Jugar 5 días distintos',                    test: p => (p.dias || []).length >= 5 },
+  { id: 'sangre',     nombre: 'PRIMERA SANGRE',     desc: 'Tu primera victoria en un duelo',           test: p => (p.victorias || 0) >= 1 },
+  { id: 'verdugo',    nombre: 'VERDUGO',            desc: '10 duelos ganados',                         test: p => (p.victorias || 0) >= 10 },
+  { id: 'imparable',  nombre: 'IMPARABLE',          desc: 'Racha de 3 victorias seguidas',             test: p => (p.rachaMax || 0) >= 3 },
+  { id: 'leyenda_v',  nombre: 'MÁQUINA DE GUERRA',  desc: '25 duelos ganados',                         test: p => (p.victorias || 0) >= 25 },
 ];
 
 function nuevoPerfil(user) {
@@ -78,6 +82,25 @@ function nivel(p) {
   const sig = NIVELES.find(x => x[0] > p.plays);
   return { nombre: n[1], siguiente: sig ? sig[1] : null, faltan: sig ? sig[0] - p.plays : 0 };
 }
+/* SALA200BOT: la voz de la casa en el chat (logros, niveles, bienvenidas) */
+function nivelIdx(plays) {
+  let n = 0;
+  for (let i = 0; i < NIVELES.length; i++) if (plays >= NIVELES[i][0]) n = i;
+  return n;
+}
+/* ---------- buzón de novedades: lo que pasa en el club ---------- */
+const NOVEDADES = [];                 // { id, ico, texto, ts }
+const NOV_MAX = 60;
+function nov(ico, texto) {
+  NOVEDADES.push({ id: Date.now() + Math.random(), ico, texto: String(texto).slice(0, 120), ts: Date.now() });
+  while (NOVEDADES.length > NOV_MAX) NOVEDADES.shift();
+}
+
+function botDice(texto) {
+  CHAT.push({ id: Date.now() + Math.random(), user: 'SALA200', texto: String(texto).slice(0, 240), ts: Date.now() });
+  while (CHAT.length > CHAT_MAX) CHAT.shift();
+}
+
 function revisarLogros(p) {
   const nuevos = [];
   for (const l of LOGROS) {
@@ -125,9 +148,60 @@ function fichaDe(u) {
   const p = leer(u);
   let nv = 0;
   for (let i = 0; i < NIVELES.length; i++) if (p.plays >= NIVELES[i][0]) nv = i;
-  const nueva = { nv, lg: (p.logros || []).length, ts: Date.now() };
+  const nueva = { nv, lg: (p.logros || []).length, av: p.avatar || '', ts: Date.now() };
   FICHAS.set(u, nueva);
   return nueva;
+}
+
+/* ---------- duelos: resultados de partidas en red, confirmados por ambos ---------- */
+const DUELOS_F = path.join(DATA, 'duelos.json');
+let DUELOS = { historial: [], pendientes: {} };
+try { DUELOS = JSON.parse(fs.readFileSync(DUELOS_F, 'utf8')); } catch (e) {}
+function guardarDuelos() { try { fs.writeFileSync(DUELOS_F, JSON.stringify(DUELOS)); } catch (e) {} }
+function registrarDuelo(ganador, perdedor, juego) {
+  DUELOS.historial.push({ g: ganador, p: perdedor, juego, ts: Date.now() });
+  if (DUELOS.historial.length > 2000) DUELOS.historial.shift();
+  const pg = leer(ganador), pp = leer(perdedor);
+  pg.victorias = (pg.victorias || 0) + 1;
+  pg.racha = (pg.racha || 0) + 1;
+  pg.rachaMax = Math.max(pg.rachaMax || 0, pg.racha);
+  pp.derrotas = (pp.derrotas || 0) + 1;
+  pp.racha = 0;
+  const logrosG = revisarLogros(pg), logrosP = revisarLogros(pp);
+  guardar(pg); guardar(pp);
+  FICHAS.delete(ganador); FICHAS.delete(perdedor);
+  guardarDuelos();
+  botDice(`⚔ ${ganador} vence a ${perdedor} en ${juego} · ¡FLIPA!`);
+  nov('⚔', `${ganador} vence a ${perdedor} en ${juego}`);
+  if (pg.racha >= 3) botDice(`🔥 ${ganador} lleva ${pg.racha} victorias seguidas · ¿quién le para?`);
+  logrosG.forEach(l => botDice(`🏅 ${ganador} desbloquea «${l.nombre}»`));
+  logrosP.forEach(l => botDice(`🏅 ${perdedor} desbloquea «${l.nombre}»`));
+}
+
+/* ---------- qué núcleo funciona con cada arcade (lo aprende la sala sola) ---------- */
+const ROMSTAT_F = path.join(DATA, 'romstat.json');
+let ROMSTAT = {};                    // rom -> { core, ok, ts }
+try { ROMSTAT = JSON.parse(fs.readFileSync(ROMSTAT_F, 'utf8')); } catch (e) {}
+let romstatSucio = false;
+setInterval(() => {
+  if (!romstatSucio) return;
+  romstatSucio = false;
+  try { fs.writeFileSync(ROMSTAT_F, JSON.stringify(ROMSTAT)); } catch (e) {}
+}, 10000);
+
+/* ---------- avatares: los guapos se ganan jugando ---------- */
+const AVATARES = {
+  '👾': null, '🕹️': null, '🎮': null, '🐍': null, '🤖': null, '😎': null,
+  '🍄': 'veinte_j', '🥷': 'noctambulo', '💀': 'cincuenta', '🔥': 'red10',
+  '⚡': 'maraton', '🏆': 'cincuenta_j', '🐉': 'todos_sys', '👑': { plays: 120 },
+};
+function puedeAvatar(p, av) {
+  if (!(av in AVATARES)) return false;
+  const req = AVATARES[av];
+  if (!req) return true;
+  if (typeof req === 'string') return (p.logros || []).includes(req);
+  if (req.plays) return (p.plays || 0) >= req.plays;
+  return false;
 }
 
 /* ---------- invitaciones: 5 por usuario, guardadas en disco ---------- */
@@ -184,6 +258,8 @@ http.createServer((req, res) => {
         inv.usado = { por: u, ts: Date.now() };
         guardarInvites();
         console.log('alta por invitacion:', u, '(invitado por', inv.de + ')');
+        botDice(`🎟 ${u} entra en la sala, invitado por ${inv.de} · dadle candela`);
+        nov('🎟', `${u} se hace socio (invitado por ${inv.de})`);
         json(res, 200, { ok: true });
       });
     });
@@ -192,6 +268,165 @@ http.createServer((req, res) => {
 
   const user = usuarioDe(req);
   if (!user) return json(res, 401, { error: 'sin sesión' });
+
+  // ---- declarar el resultado de un duelo (confirmación cruzada) ----
+  if (req.method === 'POST' && url.pathname === '/duelo') {
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 800) req.destroy(); });
+    req.on('end', () => {
+      let e = {};
+      try { e = JSON.parse(body || '{}'); } catch {}
+      const rival = String(e.rival || '').toLowerCase().slice(0, 16);
+      const juego = String(e.juego || '?').slice(0, 60);
+      const digo = e.resultado === 'gane' ? 'gane' : 'pierdo';
+      if (!rival || rival === user) return json(res, 400, { error: 'rival' });
+      for (const k in DUELOS.pendientes)
+        if (Date.now() - DUELOS.pendientes[k].ts > 300000) delete DUELOS.pendientes[k];
+      const clave = [user, rival].sort().join('|') + '|' + juego;
+      const pend = DUELOS.pendientes[clave];
+      if (pend && pend.de === rival) {
+        // el rival ya declaró: ¿casan las versiones? (uno gana, el otro pierde)
+        delete DUELOS.pendientes[clave];
+        const casan = (pend.resultado === 'gane' && digo === 'pierdo') ||
+                      (pend.resultado === 'pierdo' && digo === 'gane');
+        if (casan) {
+          const gana = pend.resultado === 'gane' ? rival : user;
+          const pierde = gana === user ? rival : user;
+          registrarDuelo(gana, pierde, juego);
+          return json(res, 200, { ok: true, registrado: true });
+        }
+        guardarDuelos();
+        return json(res, 200, { ok: true, registrado: false });
+      }
+      DUELOS.pendientes[clave] = { de: user, resultado: digo, ts: Date.now() };
+      guardarDuelos();
+      json(res, 200, { ok: true, pendiente: true });
+    });
+    return;
+  }
+
+  // ---- editar mi ficha (frase de guerra, país, juego de cabecera, avatar) ----
+  if (req.method === 'POST' && url.pathname === '/perfil') {
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 2000) req.destroy(); });
+    req.on('end', () => {
+      let e = {};
+      try { e = JSON.parse(body || '{}'); } catch {}
+      const p = leer(user);
+      if (typeof e.frase === 'string') p.frase = e.frase.trim().slice(0, 80);
+      if (typeof e.pais === 'string') p.pais = e.pais.trim().slice(0, 24);
+      if (typeof e.favorito === 'string') p.favorito = e.favorito.trim().slice(0, 40);
+      if (typeof e.avatar === 'string') {
+        if (e.avatar === '') p.avatar = '';
+        else if (puedeAvatar(p, e.avatar)) p.avatar = e.avatar;
+        else return json(res, 403, { error: 'bloqueado' });
+      }
+      guardar(p);
+      FICHAS.delete(user);              // que el avatar nuevo se vea al momento
+      json(res, 200, { ok: true, perfil: p });
+    });
+    return;
+  }
+  // ---- buzón de novedades del club (+ tus menciones del chat) ----
+  if (req.method === 'GET' && url.pathname === '/novedades') {
+    const rx = new RegExp('(^|\\W)@' + user + '($|\\W)', 'i');
+    const menciones = CHAT.filter(m => m.user !== user && rx.test(m.texto || ''))
+      .slice(-10).map(m => ({ id: 'm' + m.id, ico: '📣', ts: m.ts,
+                              texto: `${m.user}: ${m.texto.slice(0, 90)}` }));
+    const todo = NOVEDADES.concat(menciones).sort((a, b) => b.ts - a.ts).slice(0, 40);
+    return json(res, 200, { novedades: todo, ahora: Date.now() });
+  }
+
+  // ---- recomendar un juego a otro socio (va a su buzón y a sus favoritos) ----
+  if (req.method === 'POST' && url.pathname === '/recomendar') {
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 1500) req.destroy(); });
+    req.on('end', () => {
+      let e = {};
+      try { e = JSON.parse(body || '{}'); } catch {}
+      const para = String(e.para || '').toLowerCase().slice(0, 16);
+      const juego = String(e.juego || '').slice(0, 80);
+      const rom = String(e.rom || '').slice(0, 200);
+      const sis = String(e.sys || '').slice(0, 16);
+      const existe = Object.values(USERS).some(n => String(n).toLowerCase() === para);
+      if (!existe || !rom) return json(res, 400, { error: 'destino' });
+      const p = leer(para);
+      p.recomendados = (p.recomendados || []).filter(r => r.rom !== rom);
+      p.recomendados.unshift({ de: user, juego, rom, sys: sis, ts: Date.now() });
+      p.recomendados = p.recomendados.slice(0, 30);
+      guardar(p);
+      nov('🎁', `${user} le recomienda ${juego} a ${para}`);
+      botDice(`🎁 ${user} le pasa «${juego}» a ${para}`);
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/recomendados') {
+    const p = leer(user);
+    return json(res, 200, { recomendados: p.recomendados || [] });
+  }
+  if (req.method === 'POST' && url.pathname === '/recomendados/visto') {
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 800) req.destroy(); });
+    req.on('end', () => {
+      let e = {};
+      try { e = JSON.parse(body || '{}'); } catch {}
+      const p = leer(user);
+      p.recomendados = (p.recomendados || []).filter(r => r.rom !== String(e.rom || ''));
+      guardar(p);
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
+
+  // ---- qué núcleo va bien con cada juego (lo reportan los jugadores) ----
+  if (req.method === 'GET' && url.pathname === '/romstat') {
+    const r = String(url.searchParams.get('rom') || '');
+    if (r) return json(res, 200, { rom: r, dato: ROMSTAT[r] || null });
+    const rotos = Object.entries(ROMSTAT).filter(([, v]) => v && v.ok === false).map(([k]) => k);
+    const buenos = {};
+    Object.entries(ROMSTAT).forEach(([k, v]) => { if (v && v.ok) buenos[k] = v.core; });
+    return json(res, 200, { rotos, buenos });
+  }
+  if (req.method === 'POST' && url.pathname === '/romstat') {
+    let body = '';
+    req.on('data', d => { body += d; if (body.length > 1500) req.destroy(); });
+    req.on('end', () => {
+      let e = {};
+      try { e = JSON.parse(body || '{}'); } catch {}
+      const r = String(e.rom || '').slice(0, 200);
+      if (!r) return json(res, 400, { error: 'rom' });
+      const prev = ROMSTAT[r];
+      // un "funciona" pesa más que un "falla": si alguien lo hizo arrancar, vale
+      if (e.ok || !prev || !prev.ok) {
+        ROMSTAT[r] = { core: String(e.core || '').slice(0, 24), ok: !!e.ok, ts: Date.now() };
+        romstatSucio = true;
+      }
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
+
+  // ---- la ficha de OTRO socio, para cotillear (solo lectura) ----
+  if (req.method === 'GET' && url.pathname === '/ficha') {
+    const u = String(url.searchParams.get('u') || '').toLowerCase();
+    const existe = Object.values(USERS).some(n => String(n).toLowerCase() === u);
+    if (!existe) return json(res, 404, { error: 'quien' });
+    const pf = leer(u);
+    const pres = PRESENCIA.get(u);
+    const ahora = (pres && Date.now() - pres.ts < VENTANA)
+      ? { donde: pres.donde, juego: pres.juego, sys: pres.sys, sala: !!pres.sala } : null;
+    return json(res, 200, { user: u, nivel: nivel(pf), perfil: pf, catalogo: LOGROS, ahora });
+  }
+
+  if (req.method === 'GET' && url.pathname === '/avatares') {
+    const p = leer(user);
+    const lista = Object.entries(AVATARES).map(([av, r]) => ({
+      av, libre: puedeAvatar(p, av),
+      req: typeof r === 'string' ? r : (r && r.plays ? 'plays:' + r.plays : null),
+    }));
+    return json(res, 200, { avatares: lista, actual: p.avatar || '' });
+  }
 
   // ---- mis invitaciones ----
   if (req.method === 'GET' && url.pathname === '/invitas') {
@@ -213,6 +448,8 @@ http.createServer((req, res) => {
     req.on('end', () => {
       let e = {};
       try { e = JSON.parse(body || '{}'); } catch {}
+      const anterior = PRESENCIA.get(user);
+      if (!anterior || Date.now() - anterior.ts > 1800000) nov('🚪', `${user} entra en la sala`);
       PRESENCIA.set(user, { ts: Date.now(), donde: e.donde || 'sala',
                             dev: e.dev === 'movil' ? 'movil' : 'pc',
                             juego: (e.juego || '').slice(0, 60), sys: e.sys || '',
@@ -230,7 +467,7 @@ http.createServer((req, res) => {
       const fi = fichaDe(u);
       lista.push({ user: u, donde: p.donde, juego: p.juego, sys: p.sys, rom: p.rom, dev: p.dev || 'pc',
                    sala: p.sala, yo: u === user, hace: Math.round((ahora - p.ts) / 1000),
-                   nv: fi.nv, lg: fi.lg });
+                   nv: fi.nv, lg: fi.lg, av: fi.av });
     }
     lista.sort((a, b) => (a.yo ? -1 : b.yo ? 1 : a.user.localeCompare(b.user)));
     return json(res, 200, { online: lista });
@@ -461,9 +698,14 @@ http.createServer((req, res) => {
       let e = {};
       try { e = JSON.parse(body || '{}'); } catch {}
       const p = leer(user);
+      const nvAntes = nivelIdx(p.plays || 0);
       const ahora = new Date();
       const hoy = ahora.toISOString().slice(0, 10);
 
+      if (e.tipo === 'crash') {
+        console.log('CRASH de', user, '·', e.sys, e.juego, '·', e.donde, '·', e.msg, '·', e.ua);
+        return json(res, 200, { ok: true });
+      }
       if (e.tipo === 'play' && e.juego) {
         p.plays++;
         p.sys[e.sys] = (p.sys[e.sys] || 0) + 1;
@@ -487,6 +729,11 @@ http.createServer((req, res) => {
       const nuevos = revisarLogros(p);
       guardar(p);
       FICHAS.delete(user);              // que el nivel nuevo se vea enseguida
+      // la voz de la casa
+      nuevos.forEach(l => { botDice(`🏅 ${user} desbloquea «${l.nombre}»`); nov('🏅', `${user} desbloquea «${l.nombre}»`); });
+      const nvAhora = nivelIdx(p.plays || 0);
+      if (nvAhora > nvAntes) { botDice(`👑 ${user} asciende a ${NIVELES[nvAhora][1]}`); nov('👑', `${user} asciende a ${NIVELES[nvAhora][1]}`); }
+      if (e.tipo === 'play' && e.juego) nov('🎮', `${user} se pone a jugar a ${String(e.juego).slice(0, 40)}`);
       json(res, 200, { ok: true, nuevos, nivel: nivel(p), perfil: p });
     });
     return;
@@ -496,9 +743,16 @@ http.createServer((req, res) => {
   if (req.method === 'GET' && url.pathname === '/ranking') {
     const dir = path.join(DATA, 'profiles');
     const lista = fs.readdirSync(dir).map(f => {
-      try { const p = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-            return { user: p.user, plays: p.plays || 0, logros: (p.logros || []).length, uniq: p.uniq || 0 }; }
-      catch { return null; }
+      try {
+        const p = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+        let nv = 0;
+        for (let i = 0; i < NIVELES.length; i++) if ((p.plays || 0) >= NIVELES[i][0]) nv = i;
+        const top = Object.entries(p.juegos || {}).sort((x, y) => y[1] - x[1])[0];
+        return { user: p.user, plays: p.plays || 0, logros: (p.logros || []).length,
+                 uniq: p.uniq || 0, minutos: p.minutos || 0, netplay: p.netplay || 0,
+                 nv, nivel: NIVELES[nv][1], avatar: p.avatar || '', frase: p.frase || '',
+                 pais: p.pais || '', favorito: p.favorito || '', top: top ? top[0] : '' };
+      } catch { return null; }
     }).filter(Boolean).sort((a, b) => b.plays - a.plays);
     return json(res, 200, { ranking: lista });
   }

@@ -112,6 +112,21 @@
   body.enred #pantMenu button[data-a="giro"], body.enred #pmTitPartida { display: none; }
   /* y en red también sobran el botón de instalar la app y el de tamaño del mando */
   body.enred #instBtn, body.enred #padFloat { display: none !important; }
+  /* en el palco solo se mira: fuera mandos y botones de jugar */
+  html.palco .ejs_virtualGamepad_parent, html.palco .ejs_virtualGamepad_button,
+  html.palco .ejs_virtualGamepad_left, html.palco #stick, html.palco #padFloat,
+  html.palco #pesetaBtn, html.palco #emojiBtn, html.palco #emojiFila,
+  html.palco #padBtn, html.palco #padPanel { display: none !important; }
+  /* pregunta de duelo al acabar una partida en red */
+  #dueloBox { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    z-index: 10010; background: rgba(3, 10, 6, .96); border: 2px solid #ffd23f; padding: 13px 16px;
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+    font-family: 'PS2P'; font-size: 9px; color: #ffe9a8; max-width: 94vw; }
+  #dueloBox.on { display: flex; }
+  #dueloBox button { font-family: 'PS2P'; font-size: 9px; background: none; border: 2px solid #ffd23f;
+    color: #ffd23f; padding: 11px 12px; cursor: pointer; }
+  #dueloBox button:hover { background: #ffd23f; color: #201800; }
+  #dueloBox button.paso { border-color: #1a3324; color: #6fa585; }
   /* el resincronizar solo tiene sentido EN red */
   #pmResync { display: none; }
   body.enred #pmResync { display: block; }
@@ -336,6 +351,88 @@
     #colocarBar { font-size: 8px; padding: 8px 10px; gap: 8px; }
     #colocarBar span { max-width: 46vw; }
   }
+  /* ================= MUEBLE DE RECREATIVA (arcade y Neo Geo) =================
+     Botones de colores como los de un salón de verdad, con su brillo y su
+     hundido al pulsar; y el cenicero de rigor, que sin eso no es un salón. */
+  html.arcade .ejs_virtualGamepad_button.b_a  { background: radial-gradient(circle at 34% 28%, #ff8f8f, #d81f26 62%, #7d0d13) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_b  { background: radial-gradient(circle at 34% 28%, #ffe58f, #f2b705 62%, #8a6600) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_c  { background: radial-gradient(circle at 34% 28%, #a8ffbe, #17b34a 62%, #0a6127) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_d  { background: radial-gradient(circle at 34% 28%, #a8d8ff, #1f7fd8 62%, #0d3f7d) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_a, html.arcade .ejs_virtualGamepad_button.b_b,
+  html.arcade .ejs_virtualGamepad_button.b_c, html.arcade .ejs_virtualGamepad_button.b_d {
+    color: rgba(255,255,255,.92) !important; border: 3px solid rgba(20,20,24,.55) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    box-shadow: inset 0 -6px 10px rgba(0,0,0,.35), inset 0 4px 8px rgba(255,255,255,.28),
+                0 4px 8px rgba(0,0,0,.5) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_a:active, html.arcade .ejs_virtualGamepad_button.b_b:active,
+  html.arcade .ejs_virtualGamepad_button.b_c:active, html.arcade .ejs_virtualGamepad_button.b_d:active {
+    box-shadow: inset 0 4px 10px rgba(0,0,0,.55) !important; transform: translateY(2px); }
+  /* 1P y 2P: botones REDONDOS de plástico blanco con la silueta de los jugadores
+     y su rótulo grabado debajo, como en el panel del mueble */
+  html.arcade .ejs_virtualGamepad_button.b_select, html.arcade .ejs_virtualGamepad_button.b_start {
+    position: relative; border-radius: 50% !important;
+    background: radial-gradient(circle at 34% 28%, #ffffff, #e6e0d0 58%, #b9b09c) !important;
+    color: #1d1a15 !important; border: 3px solid rgba(20,20,24,.5) !important;
+    box-shadow: inset 0 -5px 9px rgba(0,0,0,.28), inset 0 4px 8px rgba(255,255,255,.85),
+                0 4px 8px rgba(0,0,0,.5) !important; }
+  html.arcade .ejs_virtualGamepad_button.b_select:active,
+  html.arcade .ejs_virtualGamepad_button.b_start:active {
+    box-shadow: inset 0 4px 10px rgba(0,0,0,.5) !important; transform: translateY(2px); }
+  html.arcade .ejs_virtualGamepad_button.b_select::after,
+  html.arcade .ejs_virtualGamepad_button.b_start::after {
+    position: absolute; left: 0; right: 0; bottom: -15px; text-align: center;
+    font-family: 'PS2P'; font-size: 7px; color: #d8ffe8; text-shadow: 0 1px 3px #000;
+    letter-spacing: .12em; }
+  html.arcade .ejs_virtualGamepad_button.b_select::after { content: '1 PLAYER'; }
+  html.arcade .ejs_virtualGamepad_button.b_start::after  { content: '2 PLAYER'; }
+  /* ---- el ritual del retador: en una recreativa no basta con conectarse ---- */
+  #retaCaja { position: fixed; z-index: 10011; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    background: rgba(3,10,6,.96); border: 3px solid #ffd23f; padding: 22px 24px; text-align: center;
+    display: none; max-width: min(90vw, 420px);
+    box-shadow: 0 0 60px rgba(255,210,63,.3); }
+  #retaCaja.on { display: block; animation: retapal .5s ease; }
+  @keyframes retapal { from { transform: translate(-50%, -50%) scale(.9); opacity: 0; } }
+  #retaCaja b { display: block; font-family: 'PS2P'; font-size: 12px; color: #ffd23f;
+    margin-bottom: 10px; letter-spacing: .08em; }
+  #retaCaja i { display: block; font-style: normal; font-size: 12px; color: #9fd8bd;
+    margin-bottom: 18px; line-height: 1.6; }
+  #retaCaja button { font-family: 'PS2P'; font-size: 11px; padding: 16px 18px; cursor: pointer;
+    background: radial-gradient(circle at 32% 28%, #fff3c4 0%, #f5c842 42%, #c89a2a 100%);
+    color: #4a3505; border: 3px double #8a6a1c; letter-spacing: .06em;
+    box-shadow: 0 4px 10px rgba(0,0,0,.5), inset 0 0 8px rgba(255,255,255,.4);
+    animation: monedapal 1.6s ease-in-out infinite; }
+  @keyframes monedapal { 50% { transform: scale(1.04); } }
+  #retaCaja button:active { transform: scale(.94); }
+
+  /* ---- el pitillo: de pie en la esquina, echando su humillo ---- */
+  #cenicero { position: fixed; z-index: 10005; right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom)); width: 16px; height: 62px; display: none;
+    pointer-events: none; }
+  html.arcade #cenicero { display: block; }
+  /* el cuerpo: papel blanco arriba y filtro naranja abajo */
+  #cenicero .pitillo { position: absolute; left: 5px; bottom: 0; width: 6px; height: 46px;
+    border-radius: 2px; transform: rotate(3deg);
+    background: linear-gradient(to top, #caa46a 0 30%, #e8dfcd 30% 100%);
+    box-shadow: 0 2px 5px rgba(0,0,0,.55), inset -1px 0 0 rgba(0,0,0,.18); }
+  /* la ceniza y la brasa, en la punta */
+  #cenicero .ascua { position: absolute; left: 4px; top: 10px; width: 8px; height: 8px; border-radius: 50%;
+    background: radial-gradient(circle, #fff3c4 0 18%, #ff8c1a 46%, #b8260a 100%);
+    box-shadow: 0 0 12px rgba(255,120,20,.9); animation: brasa 2.8s ease-in-out infinite; }
+  @keyframes brasa { 50% { opacity: .5; box-shadow: 0 0 6px rgba(255,120,20,.45); } }
+  /* dos hilillos de humo, a distinto ritmo, que suben y se van */
+  #cenicero .humo, #cenicero .humo2 { position: absolute; left: 7px; top: 6px; width: 2px; height: 22px;
+    border-radius: 2px; transform-origin: bottom center;
+    background: linear-gradient(to top, rgba(226,226,226,.34), rgba(226,226,226,0)); }
+  #cenicero .humo { animation: humea 4s ease-in-out infinite; }
+  #cenicero .humo2 { animation: humea 5.2s ease-in-out .9s infinite; }
+  @keyframes humea {
+    0%   { opacity: 0; transform: translateY(6px) scaleY(.5) translateX(0) rotate(0deg); }
+    30%  { opacity: .75; }
+    100% { opacity: 0; transform: translateY(-26px) scaleY(1.4) translateX(9px) rotate(8deg); } }
+  body.colocando #cenicero { display: none; }
+
+  /* el cartel de inicio del emulador: lo pulsamos solos, que no se vea */
+  .ejs_start_button { opacity: 0 !important; pointer-events: none !important; }
   #fsToast { position: fixed; left: 50%; top: 14px; transform: translateX(-50%) translateY(-20px);
     z-index: 10001; background: rgba(3,10,6,.95); border: 2px solid #1a3324; color: #d8ffe8;
     font-size: 12px; line-height: 1.5; padding: 12px 16px; max-width: min(92vw, 520px); text-align: center;
@@ -368,7 +465,7 @@
 <script>
 const p = new URLSearchParams(location.search);
 const sysCore = { snes: 'snes9x', nes: 'fceumm', megadrive: 'genesis_plus_gx', neogeo: 'fbneo',
-  arcade: 'fbneo', gb: 'gambatte', gba: 'mgba', psx: 'pcsx_rearmed', n64: 'mupen64plus_next',
+  arcade: 'mame2003_plus', gb: 'gambatte', gba: 'mgba', psx: 'pcsx_rearmed', n64: 'mupen64plus_next',
   sms: 'genesis_plus_gx', gg: 'genesis_plus_gx' };
 const sys = p.get('sys') || 'snes';
 document.getElementById('title').textContent = p.get('name') || '';
@@ -389,9 +486,18 @@ const TP = LANG === 'en' ? {
   npConectando: 'CONNECTING TO', npColega: 'YOUR FRIEND',
   npFallo: 'FAILED TO SET UP THE MATCH: ',
   npSync: 'MATCH IN SYNC!', npDale: 'go get them',
+  retaTit: '🪙 YOUR TURN, CHALLENGER', retaBtn: 'INSERT COIN & JOIN',
+  retaSub: 'the cabinet needs your coin to let you in',
+  retaHost: '⚔ CHALLENGER CONNECTED<br>waiting for their coin…',
+  retaDentro: '🪙 Coin in · you are in the game',
   npCorte: 'LOST CONNECTION TO YOUR RIVAL<br>YOU KEEP PLAYING LOCALLY',
   npAfk: 'YOUR RIVAL STEPPED AWAY<br>MATCH PAUSED · IT RESUMES BY ITSELF',
   npVersion: 'IS IT THE SAME GAME FILE?<br>BOTH LEAVE AND REJOIN VIA THE JOIN BUTTON',
+  palcoBusca: 'FINDING THE MATCH<span class="dots"></span>', palcoTune: 'TUNING IN<span class="dots"></span>',
+  palcoOn: '👁 LIVE FROM THE GALLERY', palcoFin: 'THE MATCH ENDED<br>THANKS FOR WATCHING',
+  palcoNadie: 'NO MATCH TO WATCH<br>GO BACK AND TRY AGAIN', palcoPausa: 'MATCH PAUSED<span class="dots"></span>',
+  dueloQ: (r) => `⚔ HOW DID IT GO AGAINST ${r}?`, dueloG: '🏆 I WON', dueloP: '💀 I LOST',
+  dueloOk: 'Noted · if your rival says the same, it goes on the record',
   npAfkFin: 'YOUR RIVAL DID NOT COME BACK<br>YOU KEEP PLAYING LOCALLY',
   mPantalla: 'SCREEN', mAjustar: '✥ ADJUST SCREEN', mAjustarSub: 'frame it your way',
   mFull: '⛶ FULLSCREEN', mNormal: '↺ NORMAL SIZE', mGiro: '⟳ ROTATE IMAGE', mSuav: 'SMOOTHING: ',
@@ -405,6 +511,7 @@ const TP = LANG === 'en' ? {
   mFps: '📈 METER: ', mFpsSub: 'frames and memory',
   mMitad: '◧ MY HALF ONLY', mMitadSub: 'for split-screen games (2P)',
   mResync: '🔄 RESYNC MATCH', mResyncSub: 'if your rival goes crazy on screen',
+  mRew: '⏪ REWIND', mRewSub: 'hold the button to go back in time',
   resyncPedida: '🔄 Resyncing the match…',
   npDesync: 'DESYNC DETECTED<br>RESYNCING AUTOMATICALLY…',
   mitadOn: '◧ Showing your half · tap again to go back', mitadOff: 'Full screen view back',
@@ -425,9 +532,18 @@ const TP = LANG === 'en' ? {
   npConectando: 'CONECTANDO CON', npColega: 'TU COLEGA',
   npFallo: 'FALLO AL PREPARAR LA PARTIDA: ',
   npSync: '¡PARTIDA SINCRONIZADA!', npDale: 'dale caña',
+  retaTit: '🪙 TE TOCA, RETADOR', retaBtn: 'ECHAR MONEDA Y ENTRAR',
+  retaSub: 'la máquina necesita tu moneda para dejarte jugar',
+  retaHost: '⚔ RETADOR CONECTADO<br>esperando su moneda…',
+  retaDentro: '🪙 Moneda dentro · ya estás en la partida',
   npCorte: 'SE CORTÓ LA CONEXIÓN CON EL RIVAL<br>SIGUES JUGANDO EN LOCAL',
   npAfk: 'EL RIVAL HA SALIDO UN MOMENTO<br>PARTIDA EN PAUSA · SIGUE SOLA AL VOLVER',
   npVersion: '¿SEGURO QUE ES EL MISMO JUEGO?<br>SALID LOS DOS Y ENTRA POR UNIRME',
+  palcoBusca: 'BUSCANDO LA PARTIDA<span class="dots"></span>', palcoTune: 'SINTONIZANDO<span class="dots"></span>',
+  palcoOn: '👁 EN DIRECTO DESDE EL PALCO', palcoFin: 'LA PARTIDA TERMINÓ<br>GRACIAS POR VENIR AL PALCO',
+  palcoNadie: 'NO HAY PARTIDA QUE VER<br>VUELVE A LA SALA E INTÉNTALO', palcoPausa: 'PARTIDA EN PAUSA<span class="dots"></span>',
+  dueloQ: (r) => `⚔ ¿CÓMO QUEDÓ CONTRA ${r}?`, dueloG: '🏆 GANÉ', dueloP: '💀 PERDÍ',
+  dueloOk: 'Apuntado · si tu rival dice lo mismo, al historial va',
   npAfkFin: 'EL RIVAL NO VOLVIÓ<br>SIGUES JUGANDO EN LOCAL',
   mPantalla: 'PANTALLA', mAjustar: '✥ AJUSTAR PANTALLA', mAjustarSub: 'marco a tu medida',
   mFull: '⛶ PANTALLA COMPLETA', mNormal: '↺ TAMAÑO NORMAL', mGiro: '⟳ GIRAR IMAGEN', mSuav: 'SUAVIZADO: ',
@@ -441,6 +557,7 @@ const TP = LANG === 'en' ? {
   mFps: '📈 MEDIDOR: ', mFpsSub: 'fotogramas y memoria',
   mMitad: '◧ SOLO MI MITAD', mMitadSub: 'para juegos a pantalla partida (2P)',
   mResync: '🔄 RESINCRONIZAR', mResyncSub: 'si ves al rival hacer cosas raras',
+  mRew: '⏪ REBOBINAR', mRewSub: 'mantén pulsado para volver atrás en el tiempo',
   resyncPedida: '🔄 Resincronizando la partida…',
   npDesync: 'DESINCRONIZACIÓN PILLADA<br>RESINCRONIZANDO SOLA…',
   mitadOn: '◧ Viendo tu mitad · toca otra vez para volver', mitadOff: 'Vista completa de nuevo',
@@ -570,6 +687,139 @@ if (!SEGURO) {
     t.addEventListener('click', e => { if (e.target.tagName !== 'A') t.remove(); });
   }, 2500);
 }
+
+/* ---------- modo palco: espectador de una partida en red ---------- */
+const ESPIAR = p.get('espiar') === '1';
+if (ESPIAR) document.documentElement.classList.add('palco');
+
+/* ---------- fuera el cartel de "pulsa para empezar" ----------
+   EmulatorJS enseña un botón de inicio antes de arrancar el juego. Además de
+   estorbar, dejaba al emulador parado y el detector de núcleos creía que el
+   juego no tiraba. Lo pulsamos nosotros en cuanto aparece. */
+(function sinCartelInicio() {
+  const dale = () => {
+    const b = document.querySelector('.ejs_start_button');
+    if (b && b.offsetParent !== null) { try { b.click(); } catch (e) {} return true; }
+    return false;
+  };
+  const t = setInterval(() => { if (dale()) clearInterval(t); }, 250);
+  setTimeout(() => clearInterval(t), 30000);
+})();
+
+/* ---------- ¿este juego arranca con este núcleo? ----------
+   El romset arcade es de una versión vieja de MAME, así que cada juego cuadra
+   con un núcleo distinto. Probamos la cadena entera hasta dar con el bueno y lo
+   apuntamos en el servidor: el siguiente que abra ese juego entra directo. */
+if (sys === 'arcade' || sys === 'neogeo') (function vigilarArranque() {
+  const CORES = (sys === 'arcade')
+    ? ['mame2003_plus', 'mame2003', 'fbalpha2012_cps1', 'fbalpha2012_cps2', 'fbneo']
+    : ['fbneo', 'mame2003_plus', 'mame2003', 'fbalpha2012_cps1', 'fbalpha2012_cps2'];
+  const rom = p.get('rom') || '';
+  const LLAVE = 'sala_probados2_' + rom;
+  const leer = () => { try { return JSON.parse(sessionStorage.getItem(LLAVE) || '[]'); } catch (e) { return []; } };
+  const anotar = (c) => {
+    const l = leer();
+    if (!l.includes(c)) l.push(c);
+    try { sessionStorage.setItem(LLAVE, JSON.stringify(l)); } catch (e) {}
+  };
+  let cerrado = false, tocado = false;
+  const actual = () => window.EJS_core;
+  const frames = () => {
+    const em = window.EJS_emulator;
+    try { return em && em.gameManager ? (parseInt(em.gameManager.getFrameNum()) || 0) : 0; } catch (e) { return 0; }
+  };
+  /* si el jugador ya ha tocado algo (moneda, botón), el juego evidentemente va:
+     a partir de ahí NADIE cambia de núcleo. Esto era lo que más rabia daba. */
+  ['pointerdown', 'keydown'].forEach(ev =>
+    addEventListener(ev, () => { tocado = true; }, { passive: true, capture: true }));
+
+  const bueno = () => {
+    if (cerrado) return;
+    cerrado = true;
+    clearInterval(tCorre); clearTimeout(tLimite);
+    anotar(actual());
+    fetch('/api/romstat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rom, core: actual(), ok: true }) }).catch(() => {});
+    console.log('[sala200] núcleo bueno para', rom, '→', actual());
+    saltarAvisos();
+  };
+
+  const saltarAvisos = () => setTimeout(() => {
+    if (typeof saltarDisclaimer === 'function') saltarDisclaimer();
+  }, 500);
+
+  /* En cuanto el juego dibuja UN SOLO frame, el núcleo es válido: lo demás
+     (disclaimer, pantalla de servicio, "insert coin") es cosa del propio juego. */
+  const tCorre = setInterval(() => {
+    if (cerrado) return;
+    if (frames() > 0) bueno();
+  }, 700);
+
+  /* Solo se cambia de núcleo si a los 40 s no ha salido NI UN FRAME y el
+     jugador no ha tocado nada: eso ya no es lentitud, es que no arranca. */
+  const tLimite = setTimeout(() => {
+    if (cerrado) return;
+    if (frames() > 0 || tocado) { bueno(); return; }
+    cerrado = true;
+    clearInterval(tCorre);
+    fetch('/api/romstat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rom, core: actual(), ok: false }) }).catch(() => {});
+    anotar(actual());
+    const probados = leer();
+    const otro = CORES.find(c => !probados.includes(c));
+    if (!otro) {
+      try { sessionStorage.removeItem(LLAVE); } catch (e) {}
+      toast(LANG === 'en' ? '❌ No core in the arcade can run this ROM'
+                          : '❌ Ningún núcleo de la sala puede con esta ROM', 6000);
+      return;
+    }
+    toast((LANG === 'en' ? '🔧 Trying core ' : '🔧 Probando con el núcleo ') + otro + '…', 2600);
+    const u = new URL(location.href);
+    u.searchParams.set('core', otro);
+    setTimeout(() => location.replace(u.toString()), 1100);
+  }, 40000);
+})();
+
+/* ---------- caja negra: si algo revienta, el motivo queda en el servidor ---------- */
+function chivato(donde, msg) {
+  try {
+    const cuerpo = JSON.stringify({ tipo: 'crash', donde, msg: String(msg || '').slice(0, 500),
+      juego: p.get('name') || '', sys, ua: navigator.userAgent.slice(0, 140) });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/event', new Blob([cuerpo], { type: 'application/json' }));
+    else fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cuerpo, keepalive: true });
+  } catch (e) {}
+}
+addEventListener('error', (e) => chivato('error',
+  (e.message || '') + ' @' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || 0)));
+addEventListener('unhandledrejection', (e) => chivato('promesa', e.reason && (e.reason.message || e.reason)));
+/* contador de reencarnaciones: si Safari mata la pestaña y la resucita, la página
+   entera recarga (aunque parezca que "solo se reinició el emulador" porque el HTML
+   vuelve al instante de caché). Si este número sube, la página está muriendo. */
+try {
+  const n = (parseInt(sessionStorage.getItem('sala_bootn') || '0', 10) || 0) + 1;
+  sessionStorage.setItem('sala_bootn', String(n));
+  const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+  if (n > 1) {
+    const heap = sessionStorage.getItem('sala_heap') || '?';
+    const vivo = sessionStorage.getItem('sala_vivo');
+    const seg = vivo ? Math.round((Date.now() - (+vivo)) / 1000) : '?';
+    chivato('reencarnacion', 'visita#' + n + ' tipo=' + (nav.type || '?') +
+            ' · heap_antes=' + heap + 'MB · vivio=' + seg + 's');
+  }
+} catch (e) {}
+/* vigía de memoria: apunta cada 5 s cuánto come el WASM; si la página muere,
+   la reencarnación cuenta cuánto tenía justo antes (el arma del crimen) */
+setInterval(() => {
+  try {
+    const em = window.EJS_emulator;
+    const m = (em && em.gameManager && em.gameManager.Module) || window.Module;
+    const bytes = m ? ((m.HEAPU8 && m.HEAPU8.length) || (m.HEAP8 && m.HEAP8.length) ||
+                       (m.wasmMemory && m.wasmMemory.buffer && m.wasmMemory.buffer.byteLength) || 0) : 0;
+    if (bytes) sessionStorage.setItem('sala_heap', String(Math.round(bytes / 1048576)));
+    sessionStorage.setItem('sala_vivo', String(sessionStorage.getItem('sala_vivo') || Date.now()));
+  } catch (e) {}
+}, 5000);
+try { sessionStorage.setItem('sala_vivo', String(Date.now())); } catch (e) {}
 
 /* ---------- identidad en red: el nombre del socio, no "Player 1" ---------- */
 let SALA_USER = localStorage.getItem('sala_user') || '';
@@ -716,6 +966,12 @@ const PADS = {
     { type: 'button', text: 'PAUSA', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10,
       fontSize: PILL, block: true, input_value: 3 }],
 
+  /* NES: el mando de toda la vida: cruceta, B y A, SELECT y START */
+  nes: [DPAD,
+    { type: 'button', text: 'B', id: 'b', location: 'right', left: 0,          top: GAP * 1.05, fontSize: FS, input_value: 0 },
+    { type: 'button', text: 'A', id: 'a', location: 'right', left: GAP * 1.15, top: GAP * .75,  fontSize: FS, input_value: 8 },
+    ...START_SELECT],
+
   /* GAME GEAR: igual que la Master System pero con START de verdad */
   gg: [DPAD,
     { type: 'button', text: '1', id: 'a', location: 'right', left: 0,       top: GAP * 1.05, fontSize: FS, input_value: 0 },
@@ -746,8 +1002,8 @@ const PADS = {
     { type: 'button', text: 'B', id: 'b', location: 'right', left: GAP * .95,  top: GAP * 1.0,  fontSize: FS, input_value: 8 },
     { type: 'button', text: 'C', id: 'c', location: 'right', left: GAP * 1.9,  top: GAP * .78,  fontSize: FS, input_value: 1 },
     { type: 'button', text: 'D', id: 'd', location: 'right', left: GAP * 2.85, top: GAP * .74,  fontSize: FS, input_value: 9 },
-    { type: 'button', text: 'COIN', id: 'select', location: 'center', left: -86, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 2 },
-    { type: 'button', text: 'START', id: 'start', location: 'center', left: 10, top: LAND ? 2 : 10, fontSize: PILL, block: true, input_value: 3 }],
+    { type: 'button', text: '👤', id: 'select', location: 'center', left: -64, top: LAND ? 0 : 8, fontSize: FS - 2, input_value: 3 },
+    { type: 'button', text: '👥', id: 'start', location: 'center', left: 16, top: LAND ? 0 : 8, fontSize: FS - 2, input_value: 15 }],
   // SNES: diamante Y/X/B/A en su posición real + gatillos L y R arriba
   snes: [DPAD,
     { type: 'button', text: 'A', id: 'a', location: 'right', left: GAP * 2, top: GAP,       fontSize: FS, input_value: 8 },
@@ -1026,7 +1282,14 @@ montarEmojis();
    Pasa por gameManager.simulateInput, así que en red viaja por el lockstep
    como cualquier botón: cada jugador echa SU moneda (la del invitado entra
    como moneda del jugador 2, igual que en el mueble de verdad). */
+let monedaEchada = false;      // la primera de la sesión entra sola al pulsar cualquier botón
+function monedaSiPrimera() {
+  if (monedaEchada || (sys !== 'arcade' && sys !== 'neogeo')) return;
+  monedaEchada = true;
+  echarMoneda();
+}
 function echarMoneda() {
+  monedaEchada = true;
   const em = window.EJS_emulator;
   if (!em || !em.started || !em.gameManager) {
     toast(LANG === 'en' ? 'Wait for the game to load' : 'Espera a que cargue el juego', 1800);
@@ -1053,6 +1316,63 @@ function montarPeseta() {
   b.addEventListener('click', echarMoneda);
 }
 montarPeseta();
+
+/* ---------- el botón de 2 JUGADORES, bien cableado ----------
+   En un mueble, START2 es del SEGUNDO puerto, no un botón más del primero.
+   Jugando solo en la máquina: mete moneda del jugador 2 y pulsa su START.
+   En partida por red cada uno es un puerto, así que allí vale como tu START. */
+function montarDosJugadores() {
+  if (sys !== 'arcade' && sys !== 'neogeo') return;
+  const b = document.querySelector('.ejs_virtualGamepad_button.b_start');
+  if (!b || b._2p) return;
+  b._2p = true;
+  const pulsa = (puerto, idx, v) => {
+    try { window.EJS_emulator.gameManager.simulateInput(puerto, idx, v); } catch (e) {}
+  };
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const em = window.EJS_emulator;
+    if (!em || !em.started) return;
+    if (em.isNetplay) {                 // en red, tu puerto ya es el tuyo
+      pulsa(0, 3, 1);
+      setTimeout(() => pulsa(0, 3, 0), 110);
+      return;
+    }
+    pulsa(1, 2, 1);                     // moneda del jugador 2
+    setTimeout(() => pulsa(1, 2, 0), 90);
+    setTimeout(() => { pulsa(1, 3, 1); setTimeout(() => pulsa(1, 3, 0), 110); }, 260);
+    vibrar(18);
+    toast(LANG === 'en' ? '👥 Player 2 in!' : '👥 ¡Jugador 2 dentro!', 1600);
+  }, true);
+}
+setTimeout(montarDosJugadores, 2500);
+setInterval(montarDosJugadores, 3000);
+
+/* ---------- ambiente de salón: colores de botonera y reposa pitis ---------- */
+if (sys === 'arcade' || sys === 'neogeo') {
+  document.documentElement.classList.add('arcade');
+  if (TACTIL && !document.getElementById('cenicero')) {
+    const c = document.createElement('div');
+    c.id = 'cenicero';
+    c.innerHTML = '<div class="pitillo"></div><div class="ascua"></div>' +
+      '<div class="humo"></div><div class="humo2"></div>';
+    document.body.appendChild(c);
+  }
+}
+
+/* Sin crédito, tocar la pantalla de la recreativa = moneda y A JUGAR: el toque
+   se captura antes de que el emulador despliegue sus menús. Con crédito dentro,
+   los toques vuelven a ser normales (menús incluidos). */
+if (sys === 'arcade' || sys === 'neogeo') {
+  const zona = document.getElementById('game');
+  if (zona) ['click', 'touchend'].forEach(ev => zona.addEventListener(ev, (e) => {
+    const em = window.EJS_emulator;
+    if (monedaEchada || !em || !em.started || ESPIAR) return;
+    e.stopPropagation();
+    e.preventDefault();
+    monedaSiPrimera();
+  }, { capture: true }));
+}
 
 
 
@@ -1289,6 +1609,7 @@ function montarPantalla() {
     ${sys === 'n64' ? `<button data-a="mitad">${TP.mMitad}<span>${TP.mMitadSub}</span></button>` : ''}
     <button data-a="despierto">${TP.mNoBloq}<b id="pmDesp">${TP.si}</b><span>${TP.mNoBloqSub}</span></button>
     <button data-a="resync" id="pmResync">${TP.mResync}<span>${TP.mResyncSub}</span></button>
+    ${!TACTIL ? `<button data-a="rew" id="pmRew">${TP.mRew}<span>${TP.mRewSub}</span></button>` : ''}
 
     <div class="pm-t">${TP.mMando}</div>
     <button data-a="stick">🕹 <b id="pmStick">${TP.cruceta}</b><span>${TP.mCrucetaSub}</span></button>
@@ -1304,6 +1625,16 @@ function montarPantalla() {
     <button data-a="fps">${TP.mFps}<b id="pmFps">${TP.no}</b><span>${TP.mFpsSub}</span></button>`;
   document.body.appendChild(menu);
   b.onclick = () => { menu.classList.toggle('on'); marcarMenuPantalla(); };
+  const rew = menu.querySelector('#pmRew');
+  if (rew) {
+    const rw = (v) => { try {
+      const em = window.EJS_emulator;
+      if (em && em.started && !em.isNetplay) em.gameManager.simulateInput(0, 28, v);
+    } catch (e) {} };
+    rew.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); rw(1); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+      rew.addEventListener(ev, () => rw(0)));
+  }
   menu.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button');
     if (!btn) return;
@@ -1315,6 +1646,7 @@ function montarPantalla() {
     else if (btn.dataset.a === 'giro') girarImagen();
     else if (btn.dataset.a === 'filtro') alternarFiltro();
     else if (btn.dataset.a === 'mitad') soloMiMitad();
+    else if (btn.dataset.a === 'rew') { /* nada al click: es mantener pulsado */ }
     else if (btn.dataset.a === 'resync') {
       const em = window.EJS_emulator;
       if (em && em.isNetplay && em.netplay) {
@@ -1396,6 +1728,7 @@ try { autoguardado = localStorage.getItem('sala_autosave') !== '0'; } catch (e) 
 let ultimoGuardado = 0, guardando = false, reanudada = false;
 
 function puedeGuardar() {
+  if (ESPIAR) return false;                    // el palco ni guarda ni reanuda
   const em = window.EJS_emulator;
   if (!em || !em.started || !em.gameManager) return false;
   if (em.isNetplay && !(em.netplay && em.netplay.owner)) return false;   // el invitado no manda
@@ -1411,7 +1744,15 @@ async function guardarPartida(motivo) {
       window.EJS_emulator.isNetplay) return false;
   guardando = true;
   try {
-    const bytes = window.EJS_emulator.gameManager.getState();
+    const em = window.EJS_emulator;
+    /* serializar EN CALIENTE mata FBNeo en el Safari del iPhone (mismo mal que
+       tuvo el checkpoint): pausa breve, dejar asentar el frame, foto, y seguir */
+    const estaba = em.paused;
+    if (!estaba) em.pause(true);
+    await new Promise(r => setTimeout(r, 80));
+    let bytes = null;
+    try { bytes = em.gameManager.getState(); }
+    finally { if (!estaba) { try { em.play(true); } catch (e2) {} } }
     if (!bytes || !bytes.length) { guardando = false; return false; }
     const r = await fetch('/api/estado?j=' + encodeURIComponent(CLAVE_PARTIDA()), {
       method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes });
@@ -1423,6 +1764,7 @@ async function guardarPartida(motivo) {
 }
 
 async function reanudarPartida() {
+  if (ESPIAR) return;
   if (!autoguardado || reanudada || !puedeGuardar()) return;
   if (window.EJS_emulator.isNetplay) return;          // en red manda el anfitrión
   reanudada = true;
@@ -1455,13 +1797,22 @@ addEventListener('pagehide', () => { guardarPartida('salida'); });
 setTimeout(() => {
   try {
     const em = window.EJS_emulator;
-    if (em && typeof em.changeSettingOption === 'function') em.changeSettingOption('save-save-interval', '30');
+    if (!em || typeof em.changeSettingOption !== 'function') return;
+    /* En iOS la escritura periódica de la pila/memory card dispara un
+       "Permission was denied" y ~30 s después WebKit mata la pestaña (los Neo
+       Geo escriben memory card SIEMPRE; los SNES sin pila ni se inmutan: por
+       eso solo moría Neo Geo). En iOS ni una escritura automática: el progreso
+       ya lo cubre nuestro autoguardado por servidor. */
+    em.changeSettingOption('save-save-interval', ES_IOS ? '0' : '30');
   } catch (e) {}
 }, 6000);
 
 /* pedimos almacenamiento permanente: si no, el navegador puede tirar el juego
    guardado en cuanto le apriete el espacio, y volverías a descargarlo entero */
-try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+try {
+  if (navigator.storage && navigator.storage.persist)
+    navigator.storage.persist().catch(() => {});   // iOS lo deniega y rechaza la promesa
+} catch (e) {}
 
 /* ================= QUE NO SE APAGUE LA PANTALLA =================
    Mientras juegas no se toca la pantalla durante minutos, así que el móvil se
@@ -1535,7 +1886,7 @@ function medidor(encender) {
         ? Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB' : '';
       let red = '';
       try { if (L && L.on) red = '\nred ' + L.d + 'f (' + Math.round(L.d * 16.7) + 'ms)' +
-        (L.rtt ? ' · rtt ' + L.rtt + 'ms' : ''); } catch (e) {}
+        (L.rtt ? ' · rtt ' + L.rtt + 'ms' : '') + (L.p2p ? ' · P2P' : ' · túnel'); } catch (e) {}
       caja.textContent = fps.toFixed(0) + ' fps\nmin ' + (minimo < 999 ? minimo.toFixed(0) : '-') +
                          (mem ? '\n' + mem : '') + red + '\n' + seg + ' s';
       cuenta = 0; t0 = t;
@@ -2437,9 +2788,10 @@ function engancharFuego() {
   const gm = em.gameManager;
   const orig = gm.simulateInput.bind(gm);
   gm.simulateInput = (jugador, idx, valor) => {
+    if (ESPIAR) return;                        // en el palco se mira, no se toca
     try {
       if (DIRIDX[idx] !== undefined) { estadoDir[DIRIDX[idx]] = valor ? 1 : 0; verDireccion(); }
-      else if (BOTONES.includes(idx)) verBoton(idx, valor);
+      else if (BOTONES.includes(idx)) { if (valor) monedaSiPrimera(); verBoton(idx, valor); }
     } catch (e) { console.warn('[sala200] fallo en el detector de gestos:', e); }
     return orig(jugador, idx, valor);
   };
@@ -2581,6 +2933,23 @@ if (!TACTIL) [1500, 3500, 6000].forEach(t => setTimeout(() => {
    /api/audio cada 2 s lastraba la partida. El arreglo de sonido de iOS de arriba
    se queda: sigue haciendo falta para el mute fantasma de EmulatorJS. */
 
+/* ---------- menciones del chat: te encuentran hasta en plena partida ---------- */
+let chatUltM = Date.now();
+setInterval(() => {
+  fetch('/api/chat?desde=' + chatUltM).then(r => r.json()).then(d => {
+    (d.chat || []).forEach(m => {
+      chatUltM = Math.max(chatUltM, m.ts);
+      const yo = quienSoy();
+      if (!yo || m.user === yo) return;
+      if (new RegExp('(^|\\W)@' + yo + '($|\\W)', 'i').test(m.texto || '')) {
+        toast('📣 ' + m.user.toUpperCase() + ': ' + String(m.texto).slice(0, 80), 6500);
+        npPito([880, 1174, 1568, 2093], .38, .08);
+        vibrar([30, 40, 30]);
+      }
+    });
+  }).catch(() => {});
+}, 5000);
+
 /* ---------- avisos de la partida en red ---------- */
 const npBar = document.getElementById('npBar');
 let npEstado = 'fuera', npNombres = [], npOculta = null;
@@ -2650,6 +3019,11 @@ function vigilarNetplay() {
   if (npEstado === 'fuera') {
     npEstado = n > 1 ? 'jugando' : 'esperando';
     npNombres = nombres;
+    if (n > 1) {
+      const yo2 = (quienSoy() || '').toLowerCase();
+      ultimoRival = nombres.find(x => x.toLowerCase() !== yo2) || '';
+      dueloPreguntado = false;
+    }
     if (npEstado === 'esperando') {
       npMostrar(`${TP.npEspera}<span class="dots"></span>`, 'wait');
       npPito([660, 880], .2, .06);
@@ -2669,6 +3043,9 @@ function vigilarNetplay() {
       npPito([523, 659, 784, 1046], .45, .075);
       vibrar(45);
       npEstado = 'jugando';
+      const yo3 = (quienSoy() || '').toLowerCase();
+      ultimoRival = nombres.find(x => x.toLowerCase() !== yo3) || ultimoRival;
+      dueloPreguntado = false;
       fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'netplay' }) }).catch(() => {});
     } else {
@@ -2853,6 +3230,11 @@ setInterval(prepararNetplay, 700);
 /* margen base en frames (a 60fps, 5f ≈ 83 ms de input lag). Ajustable para
    experimentar: localStorage.setItem('sala_retardo','4') en consola y recargar. */
 const RETARDO = Math.max(3, Math.min(8, parseInt(localStorage.getItem('sala_retardo') || '5', 10) || 5));
+/* El vigilante de desincronización solo tiene sentido en N64: su core diverge de
+   verdad. En SNES y compañía los savestates traen detalles que difieren entre
+   máquinas sin que la partida esté rota, y daba falsos positivos: resincronizaba
+   cada 30 s y salía "¡PARTIDA SINCRONIZADA!" sin parar. */
+const CHK_ON = (sys === 'n64');
 const RETARDO_MAX = 10;            // techo del margen adaptativo (~166 ms)
 const L = {
   on: false,                       // lockstep en marcha
@@ -2869,8 +3251,10 @@ const L = {
   tEspera: 0, tEstado: 0, tPedido: 0, tRoto: 0,
   cola: [], v2: false,             // batching: 2 frames por mensaje (si el rival lo habla)
   chkF: 1800, chkMios: {}, chkSuyos: {},   // huellas del estado para pillar desyncs
+  chkOcupado: false,               // sacando huella: nadie reanuda hasta terminar
   tSubida: 0,                      // última vez que subió el margen (para poder bajarlo)
   tPing: 0, rtt: 0,                // medición de ida y vuelta con el rival
+  pc: null, dc: null, p2p: false,  // canal DIRECTO con el rival (WebRTC), sin pasar por la Pi
   afk: 0,                          // el rival avisó de que salía un momento (wasap...)
   tEstadoMax: 8000                 // paciencia con el envío del estado (según su tamaño)
 };
@@ -2878,10 +3262,24 @@ function lkRaw(em) { return parseInt(em.gameManager.getFrameNum()) || 0; }
 function lkReset() {
   L.on = false; L.hs = false; L.pend = []; L.fAnt = 0; L.stalls = []; L.afk = 0;
   L.cola = [];                     // ojo: L.v2 NO se limpia aquí: es por rival, se olvida en lkParar
-  L.chkF = 1800; L.chkMios = {}; L.chkSuyos = {};
+  L.chkF = 1800; L.chkMios = {}; L.chkSuyos = {}; L.chkOcupado = false;
   L.mios = {}; L.suyos = {}; L.ultimoRemoto = -1; L.esperando = null;
 }
-function lkEnviar(em, m) { try { em.netplay.socket.emit('data-message', m); } catch (e) {} }
+function lkEnviarSocket(em, m) { try { em.netplay.socket.emit('data-message', m); } catch (e) {} }
+/* Los botones viajan por DOS caminos a la vez: el socket (que pasa por el túnel
+   y la Pi, y alimenta al palco) y el canal directo con el rival, que suele llegar
+   bastante antes. Aplicar dos veces los mismos inputs es inofensivo: para cada
+   frame se guarda el mismo contenido. Nos quedamos de facto con el más rápido. */
+function lkEnviar(em, m) {
+  const directo = L.p2p && L.dc && L.dc.readyState === 'open';
+  // el ping mide el camino por el que van los botones: si hay atajo, solo por ahí
+  if (directo && (m.s2 === 'png' || m.s2 === 'pog')) { try { L.dc.send(JSON.stringify(m)); } catch (e) {} return; }
+  lkEnviarSocket(em, m);
+  if (L.p2p && L.dc && L.dc.readyState === 'open' &&
+      (m.s2 === 'in' || m.s2 === 'in2' || m.s2 === 'png' || m.s2 === 'pog')) {
+    try { L.dc.send(JSON.stringify(m)); } catch (e) {}
+  }
+}
 function lkMiIndice(em) { return em.netplay.owner ? 0 : 1; }   // anfitrión = mando 1
 
 /* Aplica los inputs del frame k en el MISMO orden en los dos lados
@@ -2905,8 +3303,20 @@ function lkFlush(em) {
 }
 function lkFrame(em, f) {
   // huella del estado cada 1800 frames (~30 s), en el MISMO frame en ambos
-  // lados: si no coinciden, las dos realidades han divergido (el kart borracho)
-  if (L.v2 && f === L.chkF) { L.chkF += 1800; lkChequeo(em, f); }
+  // lados: si no coinciden, las dos realidades han divergido (el kart borracho).
+  // OJO: serializar EN CALIENTE pegado al frame reventaba los cores de FBNeo
+  // (los Metal Slug a los 30 s clavados); se hace como el handshake: pausa
+  // breve, dejar asentar el frame, huella, y seguir. Simétrico en ambos lados.
+  if (CHK_ON && L.v2 && f === L.chkF) {
+    L.chkF += 1800;
+    L.chkOcupado = true;
+    em.pause(true);
+    setTimeout(() => {
+      lkChequeo(em, f);
+      L.chkOcupado = false;
+      if (L.on && L.esperando == null && !L.afk) { try { em.play(true); } catch (e) {} }
+    }, 80);
+  }
   // 1) mando mis botones para el frame f+L.d; aunque no haya ninguno,
   //    el mensaje (o su hueco en la cola) es el latido que deja avanzar al otro
   L.mios[f + L.d] = L.pend;
@@ -2974,6 +3384,7 @@ function lkTick() {
     try { leerMando(); } catch (e) {}
     cb(ts);
     try { lkTick(); } catch (e) {}
+    try { if (ESPIAR) espTick(); } catch (e) {}
   });
 })();
 
@@ -2982,8 +3393,14 @@ function lkArrancar(em) {
   if (L.hs || L.on) return;
   lkReset(); L.hs = true; L.tEstado = Date.now();
   L.gen = (Date.now() % 1e9) + Math.floor(Math.random() * 1000);
-  em.pause(true);
+  /* en recreativa, primero quitamos el disclaimer y dejamos correr un poco:
+     así el invitado recibe la máquina ya lista, no la pantalla de avisos */
+  const esArcade = (sys === 'arcade' || sys === 'neogeo');
+  if (esArcade) { try { saltarDisclaimer(); } catch (e) {} }
+  const espera = esArcade ? 2200 : 120;
+  if (!esArcade) em.pause(true);
   setTimeout(() => {                         // deja asentarse el frame en curso
+    if (esArcade) em.pause(true);
     let estado = null;
     try { estado = em.gameManager.getState(); }
     catch (e) { console.warn('[lockstep] no pude sacar el estado:', e); L.hs = false; return; }
@@ -3004,7 +3421,7 @@ function lkArrancar(em) {
     } else {
       mandar(estado, false);
     }
-  }, 120);
+  }, espera);
 }
 
 /* Arranque común: a partir de aquí los dos cuentan frames desde cero. */
@@ -3017,7 +3434,10 @@ function lkComenzar(em) {
     console.log('[lockstep] conexión estable: retardo baja a', L.d, 'frames');
   }
   L.init = lkRaw(em); L.fAnt = 0; L.on = true;
-  npMostrar(`${TP.npSync}<br><span style="font-size:9px;color:#6fa585">${TP.npDale}</span>`, 'go', 3000);
+  // el anfitrión propone el canal directo en cuanto la partida arranca
+  if (!L.pc) p2pArmar(em, !!(em.netplay && em.netplay.owner));
+  if (sys === 'arcade' || sys === 'neogeo') setTimeout(ritualRecreativa, 1200);
+  if (!L.avisado) { L.avisado = true; npMostrar(`${TP.npSync}<br><span style="font-size:9px;color:#6fa585">${TP.npDale}</span>`, 'go', 3000); }
   em.play(true);
 }
 
@@ -3043,11 +3463,61 @@ function lkCompara(em, f) {
   if (mia === undefined || suya === undefined) return;   // aún falta una de las dos
   delete L.chkMios[f]; delete L.chkSuyos[f];
   if (mia !== suya) {
-    console.warn('[lockstep] desync detectado en el frame', f, '→ resincronizando');
+    L.chkFallos = (L.chkFallos || 0) + 1;
+    console.warn('[lockstep] huella distinta en el frame', f, '· fallo', L.chkFallos);
+    if (L.chkFallos < 2) return;          // uno suelto puede ser ruido: esperamos al siguiente
+    L.chkFallos = 0;
     npMostrar(TP.npDesync, 'wait', 5000);
     lkReset();
     lkArrancar(em);
+  } else {
+    L.chkFallos = 0;
   }
+}
+
+/* ================= CANAL DIRECTO CON EL RIVAL (WebRTC) =================
+   El túnel y la Pi están muy bien para servir la web, pero para los botones
+   sobran: cada pulsación cruzaba móvil → borde (Madrid) → Pi → borde → rival.
+   Aquí los dos navegadores se conectan DIRECTAMENTE (el socket solo hace de
+   casamentero). Si la conexión directa no cuaja, todo sigue por el camino de
+   siempre: es un atajo, no un sustituto. */
+const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }];
+function p2pCerrar() {
+  try { if (L.dc) L.dc.close(); } catch (e) {}
+  try { if (L.pc) L.pc.close(); } catch (e) {}
+  L.dc = null; L.pc = null; L.p2p = false;
+}
+function p2pCanal(em, dc) {
+  L.dc = dc;
+  dc.onopen = () => {
+    L.p2p = true;
+    console.log('[lockstep] canal directo con el rival: ABIERTO');
+  };
+  dc.onclose = () => { L.p2p = false; };
+  dc.onmessage = (ev) => {
+    try { lkMensaje(em, JSON.parse(ev.data)); } catch (e) {}
+  };
+}
+function p2pArmar(em, ofrezco) {
+  if (!window.RTCPeerConnection || L.pc) return;
+  try {
+    const pc = new RTCPeerConnection({ iceServers: ICE });
+    L.pc = pc;
+    pc.onicecandidate = (e) => {
+      if (e.candidate) lkEnviarSocket(em, { s2: 'ice', c: e.candidate.toJSON() });
+    };
+    pc.onconnectionstatechange = () => {
+      if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) L.p2p = false;
+    };
+    if (ofrezco) {
+      p2pCanal(em, pc.createDataChannel('lk', { ordered: true }));
+      pc.createOffer().then(o => pc.setLocalDescription(o))
+        .then(() => lkEnviarSocket(em, { s2: 'sdp', d: pc.localDescription }))
+        .catch(() => {});
+    } else {
+      pc.ondatachannel = (e) => p2pCanal(em, e.channel);
+    }
+  } catch (e) { L.pc = null; }
 }
 
 /* Todo lo que llega del otro jugador pasa por aquí. */
@@ -3084,6 +3554,26 @@ function lkMensaje(em, t) {
     lkCompara(em, t.f);
     return;
   }
+  if (t.s2 === 'sdp') {                      // saludo del canal directo
+    const d = t.d;
+    if (!d) return;
+    if (d.type === 'offer') {
+      if (!L.pc) p2pArmar(em, false);
+      if (!L.pc) return;
+      L.pc.setRemoteDescription(d)
+        .then(() => L.pc.createAnswer())
+        .then(a2 => L.pc.setLocalDescription(a2))
+        .then(() => lkEnviarSocket(em, { s2: 'sdp', d: L.pc.localDescription }))
+        .catch(() => {});
+    } else if (d.type === 'answer' && L.pc && !L.pc.currentRemoteDescription) {
+      L.pc.setRemoteDescription(d).catch(() => {});
+    }
+    return;
+  }
+  if (t.s2 === 'ice') {
+    try { if (L.pc && t.c) L.pc.addIceCandidate(t.c).catch(() => {}); } catch (e) {}
+    return;
+  }
   if (t.s2 === 'png') { lkEnviar(em, { s2: 'pog', t: t.t }); return; }   // eco del ping
   if (t.s2 === 'pog') { L.rtt = Date.now() - t.t; return; }               // rtt medido
   if (t.s2 === 'lag') {                      // el rival se atasca esperándome: mando antes
@@ -3108,7 +3598,7 @@ function lkMensaje(em, t) {
     if (L.on && L.esperando != null && L.ultimoRemoto >= L.esperando) {
       const k = L.esperando; L.esperando = null;
       lkAplicar(em, k);
-      em.play(true);
+      if (!L.chkOcupado) em.play(true);   // con huella en curso, reanuda el propio checkpoint
     }
     return;
   }
@@ -3150,10 +3640,103 @@ function lkMensaje(em, t) {
   }
 }
 
+/* ---------- saltar el disclaimer de MAME ----------
+   Los núcleos de MAME arrancan con su pantalla de avisos. Se pasa pulsando
+   OK/START. Es global porque hace falta en dos sitios: al arrancar el juego y,
+   sobre todo, ANTES de que el anfitrión reparta la partida por red (si no, el
+   invitado recibe una foto con el disclaimer puesto y cada uno ve una cosa). */
+function saltarDisclaimer() {
+  const em = window.EJS_emulator;
+  if (!em || !em.gameManager) return;
+  const pulsa = (idx) => {
+    try {
+      em.gameManager.functions.simulateInput(0, idx, 1);
+      setTimeout(() => { try { em.gameManager.functions.simulateInput(0, idx, 0); } catch (e) {} }, 90);
+    } catch (e) {
+      try {
+        em.gameManager.simulateInput(0, idx, 1);
+        setTimeout(() => { try { em.gameManager.simulateInput(0, idx, 0); } catch (e2) {} }, 90);
+      } catch (e2) {}
+    }
+  };
+  [0, 450, 900, 1350].forEach((t, i) => setTimeout(() => pulsa(i % 2 ? 3 : 0), t));
+}
+
+/* ---------- el ritual de la recreativa a dobles ----------
+   En consola entras y ya; en un mueble hay que echar TU moneda y pulsar TU
+   botón de jugador. El anfitrión ya está dentro con su crédito, así que al
+   retador le damos el botón bien grande: moneda + START de su puerto. */
+function ritualRecreativa() {
+  const em = window.EJS_emulator;
+  if (!em || !em.isNetplay || ESPIAR) return;
+  if (em.netplay && em.netplay.owner) {           // el de la máquina: solo el aviso
+    npMostrar(TP.retaHost, 'wait', 6000);
+    return;
+  }
+  let c = document.getElementById('retaCaja');
+  if (!c) {
+    c = document.createElement('div');
+    c.id = 'retaCaja';
+    document.body.appendChild(c);
+  }
+  c.innerHTML = `<b>${TP.retaTit}</b><i>${TP.retaSub}</i>
+    <button>🪙 ${TP.retaBtn}</button>`;
+  c.classList.add('on');
+  c.querySelector('button').onclick = () => {
+    c.classList.remove('on');
+    const g = window.EJS_emulator && window.EJS_emulator.gameManager;
+    if (!g) return;
+    const pulsa = (idx, t) => setTimeout(() => {
+      try { g.simulateInput(0, idx, 1); } catch (e) {}
+      setTimeout(() => { try { g.simulateInput(0, idx, 0); } catch (e) {} }, 100);
+    }, t);
+    pulsa(2, 0);                                   // tu moneda (va a TU puerto por el lockstep)
+    pulsa(3, 450);                                 // y tu START
+    pulsa(3, 1100);                                // por si el juego pedía dos toques
+    vibrar([15, 40, 25]);
+    npPito([2093, 1568, 2637], .22, .09);
+    toast(TP.retaDentro, 2600);
+    monedaEchada = true;
+  };
+  setTimeout(() => c.classList.remove('on'), 30000);
+}
+
+/* ---------- el marcador de duelos: ¿quién ganó? ---------- */
+let ultimoRival = '', dueloPreguntado = false;
+function preguntarDuelo() {
+  if (ESPIAR || dueloPreguntado || !ultimoRival) return;
+  dueloPreguntado = true;
+  let caja = document.getElementById('dueloBox');
+  if (!caja) {
+    caja = document.createElement('div');
+    caja.id = 'dueloBox';
+    document.body.appendChild(caja);
+  }
+  const riv = ultimoRival;
+  caja.innerHTML = `<span>${TP.dueloQ(riv.toUpperCase())}</span>
+    <button data-r="gane">${TP.dueloG}</button>
+    <button data-r="pierdo">${TP.dueloP}</button>
+    <button class="paso" data-r="">✕</button>`;
+  caja.classList.add('on');
+  caja.onclick = (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    caja.classList.remove('on');
+    if (!b.dataset.r) return;
+    fetch('/api/duelo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rival: riv, juego: p.get('name') || '?', resultado: b.dataset.r }) })
+      .then(() => toast(TP.dueloOk, 3200)).catch(() => {});
+  };
+  clearTimeout(caja._t);
+  caja._t = setTimeout(() => caja.classList.remove('on'), 40000);
+}
+
 function lkParar(em) {
   const iba = L.on || L.hs;
   lkReset();
+  p2pCerrar();
   L.afk = 0;
+  L.avisado = false;                                     // cartel de sincronía: una vez por sala
   L.v2 = false;                                          // el próximo rival puede hablar otra versión
   L.d = RETARDO;                                         // margen aprendido: solo vale para ESA conexión
   if (iba) { try { em.play(true); } catch (e) {} }       // que el que queda siga jugando
@@ -3182,6 +3765,14 @@ setInterval(() => {
   }
   L.tRoto = 0;
   if (L.on) { try { lkFlush(em); } catch (e) {} }   // nada se queda en la cola más de 1 s
+  /* margen a la baja: si llevamos 15 s sin un solo atasco, devolvemos un frame
+     (cada uno son 16 ms menos de retardo en tus botones). Es seguro: el margen
+     es de cada lado y solo decide con cuánta antelación programo MIS inputs. */
+  if (L.on && L.d > RETARDO && !L.stalls.length && Date.now() - L.tSubida > 15000) {
+    L.d--;
+    L.tSubida = Date.now();
+    console.log('[lockstep] conexión fina: retardo baja a', L.d, 'frames');
+  }
   if (L.afk) {                                   // el rival está en el wasap: paciencia
     if (Date.now() - L.afk > 120000) {           // 2 min y no vuelve: cada uno a lo suyo
       lkParar(em);
@@ -3195,7 +3786,12 @@ setInterval(() => {
     L.tPing = Date.now();
     lkEnviar(em, { s2: 'png', t: Date.now() });
   }
-  if ((L.on || L.hs) && n < 2) { lkParar(em); return; }  // el otro se fue
+  if ((L.on || L.hs) && n < 2) {
+    const jugamos = L.on;                                // solo preguntamos si hubo partida de verdad
+    lkParar(em);
+    if (jugamos) preguntarDuelo();
+    return;
+  }
   /* invitado esperando un 'go' que se perdió por el camino: el anfitrión tiene su
      propio vigilante, pero el invitado se quedaba pausado PARA SIEMPRE. Soltamos
      el handshake y la rama de abajo pedirá un resync limpio. */
@@ -3228,6 +3824,130 @@ document.addEventListener('visibilitychange', () => {
     if (em.netplay.owner) { lkReset(); lkArrancar(em); }  // el anfitrión reparte estado él mismo
   }
 });
+
+/* ================= EL PALCO: ver una partida en directo =================
+   Un espectador es un tercer emulador gemelo: recibe el MISMO savestate y los
+   MISMOS botones que se cruzan los jugadores (el relay le espeja el tráfico,
+   etiquetando quién envía) y los aplica en los mismos frames. Ni envía inputs
+   ni cuenta como jugador: mira. Va unos frames por detrás como colchón. */
+const V = {
+  on: false, init: 0, fAnt: 0, gen: 0,
+  de: [{}, {}],                    // inputs por frame de cada jugador (0=anfitrión)
+  u: [-1, -1],                     // último frame anunciado por cada uno
+  esperando: null, colch: 4, sock: null, fin: false
+};
+function espAplicar(em, k) {
+  for (let j = 0; j < 2; j++) {
+    const cola = V.de[j][k] || [];
+    for (const i of cola) {
+      try { em.gameManager.functions.simulateInput(i[0], i[1], i[2]); } catch (e) {}
+    }
+    delete V.de[j][k];
+  }
+}
+function espTick() {
+  const em = window.EJS_emulator;
+  if (!V.on || !em || !em.gameManager) return;
+  const f = (parseInt(em.gameManager.getFrameNum()) || 0) - V.init;
+  if (f <= V.fAnt) return;
+  while (V.fAnt < f && V.on && V.esperando == null) {
+    V.fAnt++;
+    const sig = V.fAnt + 1;
+    if (Math.min(V.u[0], V.u[1]) < sig && sig > RETARDO) {
+      V.esperando = sig;
+      em.pause(true);
+      return;
+    }
+    espAplicar(em, sig);
+  }
+}
+function espSigue(em) {
+  if (V.esperando != null && Math.min(V.u[0], V.u[1]) >= V.esperando + V.colch) {
+    const k = V.esperando; V.esperando = null;
+    espAplicar(em, k);
+    if (!V.fin) { try { em.play(true); } catch (e) {} }
+  }
+}
+function espMensaje(em, own, t) {
+  if (!t || !t.s2) return;
+  const j = own ? 0 : 1;
+  if (t.s2 === 'state' && own) {               // sincronización fresca del anfitrión
+    V.gen = t.g; V.de = [{}, {}]; V.u = [-1, -1]; V.fAnt = 0; V.esperando = null; V.on = false;
+    em.pause(true);
+    const cargar = (bytes) => {
+      try { em.gameManager.loadState(bytes); } catch (e) { return; }
+      npMostrar(TP.palcoTune, 'wait');
+    };
+    const d = new Uint8Array(t.d);
+    if (t.z) {
+      new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('gzip')))
+        .arrayBuffer().then(b => cargar(new Uint8Array(b))).catch(() => {});
+    } else cargar(d);
+    return;
+  }
+  if (t.s2 === 'go' && own) {                  // los jugadores arrancan: nosotros también
+    if (t.g !== V.gen) return;
+    V.init = (parseInt(em.gameManager.getFrameNum()) || 0);
+    V.fAnt = 0; V.on = true;
+    npMostrar(TP.palcoOn, 'go', 3500);
+    try { em.play(true); } catch (e) {}
+    return;
+  }
+  if (t.g !== undefined && t.g !== V.gen) return;
+  if (t.s2 === 'in') {
+    if (Array.isArray(t.k) && t.k.length) V.de[j][t.f] = t.k;
+    if (t.f > V.u[j]) V.u[j] = t.f;
+    espSigue(em);
+    return;
+  }
+  if (t.s2 === 'in2') {
+    for (const par of (t.p || [])) {
+      if (Array.isArray(par[1]) && par[1].length) V.de[j][par[0]] = par[1];
+      if (par[0] > V.u[j]) V.u[j] = par[0];
+    }
+    espSigue(em);
+    return;
+  }
+  if (t.s2 === 'zzz') { npMostrar(TP.palcoPausa, 'wait'); return; }
+  if (t.s2 === 'emo' && t.f) {                 // las frases de pique también se ven en el palco
+    try { mostrarFrase(String(t.f).slice(0, 60), String(t.e || '').slice(0, 8), String(t.de || '').slice(0, 20)); } catch (e) {}
+    return;
+  }
+  if (t.s2 === 'emo') {
+    try { mostrarEmoji(String(t.e || '').slice(0, 8), String(t.de || '').slice(0, 20)); } catch (e) {}
+  }
+}
+function montarPalco() {
+  const em = window.EJS_emulator;
+  if (!em || !em.started || V.sock) { if (!V.sock) setTimeout(montarPalco, 700); return; }
+  if (typeof io !== 'function') { setTimeout(montarPalco, 700); return; }
+  em.pause(true);
+  npMostrar(TP.palcoBusca, 'wait');
+  // la sala se localiza por juego (mismo game_id que usan los jugadores)
+  fetch('/list?domain=' + location.host + '&game_id=' + window.EJS_gameID)
+    .then(r => r.json()).then(salas => {
+      const claves = Object.keys(salas || {});
+      const quien = (p.get('host') || '').toLowerCase();
+      const ses = claves.find(c => String(salas[c].owner_name || '').toLowerCase() === quien) || claves[0];
+      if (!ses) { npMostrar(TP.palcoNadie, 'wait'); return; }
+      V.sock = io(location.origin, { path: '/socket.io/' });
+      V.sock.on('connect', () => {
+        V.sock.emit('espiar', ses, (ok) => {
+          if (!ok) { npMostrar(TP.palcoNadie, 'wait'); return; }
+          npMostrar(TP.palcoTune, 'wait');
+          V.sock.emit('palco-resync');           // que el anfitrión reparta estado
+          setTimeout(() => { if (!V.on && !V.fin) V.sock.emit('palco-resync'); }, 8000);
+        });
+      });
+      V.sock.on('palco-msg', (d) => { try { espMensaje(em, !!d.own, d.m); } catch (e) {} });
+      V.sock.on('palco-fin', () => {
+        V.fin = true; V.on = false;
+        try { em.pause(true); } catch (e) {}
+        npMostrar(TP.palcoFin, 'wait');
+      });
+    }).catch(() => npMostrar(TP.palcoNadie, 'wait'));
+}
+if (ESPIAR) setTimeout(montarPalco, 1500);
 
 /* Enganche: cada vez que EmulatorJS (re)crea su objeto netplay, le colamos
    nuestro motor encima. Los handlers del socket llaman a estas funciones por
@@ -3599,14 +4319,32 @@ function leerMando() {
   const p = padReal();
   if (!p) return;
 
+  const CON_RANURA = (sys === 'arcade' || sys === 'neogeo');
   for (const [btn, ctrl] of Object.entries(MAPA_BOTONES)) {
     const b = p.buttons[btn];
     const pulsado = b ? (typeof b === 'object' ? b.pressed : b === 1) : false;
     const clave = 'b' + btn;
     if (estado[clave] !== pulsado) {
       estado[clave] = pulsado;
+      // en la recreativa, los gatillos L2/R2 son la ranura de monedas
+      if (CON_RANURA && (btn === '6' || btn === '7')) {
+        if (pulsado) echarMoneda();
+        continue;
+      }
+      if (pulsado && CON_RANURA) monedaSiPrimera();
       try { em.gameManager.simulateInput(0, ctrl, pulsado ? 1 : 0); } catch (e) {}
     }
+  }
+  // SELECT + START mantenidos 1 s = salir al menú guardando (el modo sofá completo)
+  const _sal = (p.buttons[8] && p.buttons[8].pressed) && (p.buttons[9] && p.buttons[9].pressed);
+  if (_sal && !leerMando._combo) leerMando._combo = performance.now();
+  else if (!_sal) leerMando._combo = 0;
+  if (leerMando._combo && performance.now() - leerMando._combo > 1000 && !leerMando._saliendo) {
+    leerMando._saliendo = true;
+    toast(LANG === 'en' ? '👋 Saving and heading back…' : '👋 Guardando y volviendo al menú…', 2200);
+    Promise.race([guardarPartida('salida'), new Promise(r => setTimeout(r, 2500))])
+      .then(() => { location.href = 'index.html'; });
+    return;
   }
   for (const [eje, ctrlNeg, ctrlPos, analog] of MAPA_EJES) {
     const v = p.axes[eje] || 0;
@@ -3765,7 +4503,25 @@ document.addEventListener('click', (e) => {
 });
 
 window.EJS_player = '#game';
+/* rebobinar: solo en escritorio (el buffer hace savestates internos frecuentes,
+   justo el patrón que iOS no perdona y que a los móviles flojos les pesa) */
+if (!TACTIL) window.EJS_defaultOptions = { rewindEnabled: 'enabled' };
+/* LIMITACIÓN CONOCIDA (2026-08-05): el core FBNeo 4.2.3 estrella el proceso de
+   WebKit en iOS 18 a los ~45 s de partida Neo Geo (probado: no es memoria (154MB),
+   ni savestates, ni autosave, ni escrituras SRAM, ni la variante legacy). A la
+   espera del core recompilado de EmulatorJS 4.3. Aviso al socio y a otra cosa. */
+const ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (ES_IOS && (sys === 'neogeo' || sys === 'arcade')) {
+  setTimeout(() => toast(LANG === 'en'
+    ? '⚠️ Neo Geo on iPhone is in the workshop (engine bug) · it may die mid-game · SNES, Mega Drive and N64 run great'
+    : '⚠️ Neo Geo en iPhone está en el taller (bug del motor) · puede caerse en plena partida · SNES, Mega Drive y N64 van finos', 7000), 2500);
+}
 window.EJS_core = sysCore[sys] || sys;
+/* núcleo alternativo por URL (&core=mame2003_plus): FBNeo estrella el WebKit
+   de iOS 18 a los ~45 s con Neo Geo; MAME2003+ es otra base de código */
+const CORES_OK = ['fbneo', 'mame2003_plus', 'mame2003', 'fbalpha2012_cps1', 'fbalpha2012_cps2'];
+if (p.get('core') && CORES_OK.includes(p.get('core'))) window.EJS_core = p.get('core');
 window.EJS_gameUrl = '/roms/' + p.get('rom');
 window.EJS_gameName = p.get('name') || '';
 window.EJS_pathtodata = 'ejs/';
@@ -3787,12 +4543,15 @@ window.EJS_gameID = (function (txt) {       // mismo juego → mismo número en 
 })(sys + '|' + (p.get('rom') || ''));
 window.EJS_Buttons = { netplay: true };
 window.EJS_alignStartButton = 'center';
-if (sys === 'neogeo' || sys === 'arcade') window.EJS_biosUrl = '/roms/NeoGeo/neogeo.zip';
+
 /* PS1: la BIOS de la consola mejora mucho la compatibilidad. Si la dejas en la carpeta
    PSX del NAS como scph1001.bin, se usa; si no está, el núcleo tira de su BIOS interna.
    Ojo: apuntar a un fichero que no existe hace que el emulador se niegue a arrancar,
    así que se comprueba antes de cargar el emulador. */
 window.EJS_biosUrl = '';
+/* Neo Geo necesita su BIOS (y solo Neo Geo: a los MAME les estorba). Ojo, esto
+   va DESPUÉS del reseteo de arriba, que antes se la comía. */
+if (sys === 'neogeo') window.EJS_biosUrl = '/roms/NeoGeo/neogeo.zip';
 
 /* El emulador guarda en el navegador los juegos que bajas: la próxima vez cargan al
    instante y se puede jugar sin conexión. El tope es por juego; lo que se acumule se
@@ -3821,9 +4580,25 @@ if (sys === 'psx') {
       }
     } catch (e) {}
   }
-  const sc = document.createElement('script');
-  sc.src = 'ejs/loader.js';
-  document.body.appendChild(sc);
+  /* Arcade: el romset es de una versión vieja de MAME, así que cada juego va
+     con un núcleo distinto. La sala lo APRENDE: si un jugador consigue que
+     arranque con uno, los demás entran ya con ese; si falla, se prueba el
+     siguiente y se apunta. */
+  const arrancar = () => {
+    const sc = document.createElement('script');
+    sc.src = 'ejs/loader.js';
+    document.body.appendChild(sc);
+  };
+  if ((sys === 'arcade' || sys === 'neogeo') && !p.get('core')) {
+    const t0 = setTimeout(arrancar, 1500);          // si la API tarda, no esperamos
+    fetch('/api/romstat?rom=' + encodeURIComponent(p.get('rom') || ''))
+      .then(r => r.json()).then(d => {
+        if (d && d.dato && d.dato.ok && d.dato.core) window.EJS_core = d.dato.core;
+      }).catch(() => {}).finally(() => { clearTimeout(t0); arrancar(); });
+  } else {
+    arrancar();
+  }
+  window.EJS_coreUsado = window.EJS_core;
 })();
 </script>
 </body>

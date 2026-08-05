@@ -3,7 +3,9 @@
 import * as THREE from 'three';
 
 const canvas = document.getElementById('scene');
-if (canvas && matchMedia('(min-width: 821px)').matches) {
+/* la sala 3D es cosa de escritorio: en móvil (aunque esté tumbado y pase de
+   820px) ni se carga: ni Three.js, ni sincronización de posiciones, ni batería */
+if (canvas && matchMedia('(min-width: 821px)').matches && !matchMedia('(pointer: coarse)').matches) {
   document.fonts.load('54px PS2P').then(init).catch(init);
 }
 const sfx = (kind) => dispatchEvent(new CustomEvent('sala:sfx', { detail: kind }));
