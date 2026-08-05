@@ -19,6 +19,8 @@ navigation and a 25-peseta coin for the INSERT COIN.
 | The library, with box art | 2270 arcade games, self-healing cores |
 | ![Member card](docs/img/ficha.png) | ![Challenger prompt](docs/img/retador.png) |
 | Member card: levels, medals, war cry | Arcade netplay: the challenger inserts their coin |
+| ![Mega Drive shelf](docs/img/megadrive.png) | ![Lobby doors](docs/img/lobby3d-2.png) |
+| Every system gets its own shelf | Walk up to a door to browse that system |
 
 ---
 
