@@ -13,6 +13,9 @@ navigation and a 25-peseta coin for the INSERT COIN.
 ![The 3D lobby](docs/img/lobby3d.png)
 *The 3D lobby: each neon door is a system, and other members walk around it in real time.*
 
+![Inside the SNES room](docs/img/sala-snes.png)
+*Walk into a system's room and browse its games as giant lit-up boxes.*
+
 | | |
 |---|---|
 | ![Library](docs/img/biblioteca.png) | ![Arcade shelf](docs/img/arcade.png) |
