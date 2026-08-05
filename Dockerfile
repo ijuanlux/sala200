@@ -33,7 +33,7 @@ COPY docker/nginx.conf       /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/sala200.conf
 RUN mkdir -p /var/lib/sala200/profiles /var/lib/sala200/estados /roms
 
-ENV SALA_SALT=cambia-este-salt \
+ENV SALA_SALT=change-this-salt \
     SALA_ADMIN=admin \
     SALA_PASS=admin
 

@@ -3,7 +3,7 @@
 # and starts the three services.
 set -e
 
-SALT="${SALA_SALT:-cambia-este-salt}"
+SALT="${SALA_SALT:-change-this-salt}"
 ADMIN="${SALA_ADMIN:-admin}"
 PASS="${SALA_PASS:-admin}"
 DATA=/var/lib/sala200
@@ -56,7 +56,7 @@ python3 /opt/sala200/genlist.py 2>/dev/null || echo '[]' > /var/www/html/juegos/
 echo "──────────────────────────────────────────────"
 echo "  SALA 200 ready at http://localhost:8080"
 echo "  member: $ADMIN   ·   password: $PASS"
-[ "$SALT" = "cambia-este-salt" ] && echo "  ⚠  set SALA_SALT=<your own> before going live"
+[ "$SALT" = "change-this-salt" ] && echo "  ⚠  set SALA_SALT=<your own> before going live"
 echo "──────────────────────────────────────────────"
 
 exec supervisord -c /etc/supervisor/conf.d/sala200.conf
